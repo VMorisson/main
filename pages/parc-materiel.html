@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Parc Matériel</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <!-- Header commun -->
+  <div id="header-placeholder"></div>
+  
+  <!-- Sidebar (sera chargée dynamiquement) -->
+  <aside id="sidebar-placeholder"></aside>
+
+  <!-- Barre réduite pour la sidebar -->
+  <div id="collapsed-sidebar" style="display: none;">
+    <div id="sidebar-label">📂</div>
+  </div>
+  
+  <!-- Contenu principal -->
+  <main class="content">
+    <h1>Page Parc Matériel</h1>
+    <p>Contenu principal ici.</p>
+    <div id="dynamic-content"></div>
+  </main>
+  
+  <!-- Conteneur pour les templates de détails -->
+  <div id="template-container" style="display:none;"></div>
+  
+  <script type="module">
+    import { auth } from "../config/firebaseConfig.js";
+    import { onAuthStateChanged } from "firebase/auth";
+    import { initInactivityLogout } from "../config/inactivityLogout.js";
+    import { loadHeader } from "../config/loadHeader.js";
+
+    // Charger le header
+    loadHeader();
+
+    // Charger la sidebar et les templates
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "../index.html";
+        return;
+      }
+      
+      try {
+        // Charger sidebar et templates simultanément
+        const [sidebarResp, templatesResp] = await Promise.all([
+          fetch('../config/sidebar.html'),
+          fetch('./displayTemplates.html')
+        ]);
+        const sidebarHTML = await sidebarResp.text();
+        const templatesHTML = await templatesResp.text();
+        
+        document.getElementById('sidebar-placeholder').innerHTML = sidebarHTML;
+        document.getElementById('template-container').innerHTML = templatesHTML;
+
+        // Initialiser la gestion de la sidebar après son chargement
+        initSidebarToggle();
+
+        // Charger la hiérarchie après que la sidebar soit injectée
+        const moduleSidebar = await import('../config/sidebarHierarchy.js');
+        moduleSidebar.loadParcHierarchy();
+
+        // Initialiser la déconnexion pour inactivité
+        initInactivityLogout(60000);
+      } catch (error) {
+        console.error("Erreur lors du chargement de la sidebar ou des templates :", error);
+      }
+    });
+
+    // Fonction pour gérer l'affichage dynamique de la sidebar
+    function initSidebarToggle() {
+      console.log("✅ Initialisation de la sidebar...");
+
+      const sidebar = document.getElementById("sidebar");
+      const collapsedSidebar = document.getElementById("collapsed-sidebar");
+      const toggleButton = document.getElementById("toggle-sidebar-btn");
+      const content = document.querySelector(".content");
+
+      if (!sidebar || !collapsedSidebar || !toggleButton || !content) {
+        console.error("❌ Un des éléments de la sidebar n'a pas été trouvé !");
+        return;
+      }
+      console.log("✅ Éléments trouvés :", { sidebar, collapsedSidebar, toggleButton });
+
+      // Rabattre la sidebar
+      toggleButton.addEventListener("click", function () {
+        console.log("▶️ Bouton de repli cliqué !");
+        sidebar.classList.add("collapsed");
+        collapsedSidebar.classList.add("visible");
+        content.classList.add("sidebar-collapsed");
+        console.log("✅ Sidebar rabattue.");
+      });
+
+      // Redéployer la sidebar
+      collapsedSidebar.addEventListener("click", function () {
+        console.log("▶️ Barre réduite cliquée !");
+        sidebar.classList.remove("collapsed");
+        collapsedSidebar.classList.remove("visible");
+        content.classList.remove("sidebar-collapsed");
+        console.log("✅ Sidebar réouverte.");
+      });
+    }
+  </script>
+</body>
+</html>

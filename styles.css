@@ -1,0 +1,321 @@
+/* styles.css */
+
+/* --------- FORM CONNEXION (exemple) --------- */
+#connexion-title {
+  color: rgb(0, 0, 0);
+  font-size: 2rem;
+  text-align: center;
+  margin-top: 20vh;
+}
+#login-form {
+  display: block;
+  max-width: 200px;
+  margin: 0 auto; /* centre le formulaire */
+}
+#login-form input {
+  display: block;
+  width: 100%;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  padding: 8px;
+}
+#login-form button {
+  display: block;
+  width: 60%;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 8px;
+}
+
+/* --------- HIÉRARCHIE (styles spécifiques) --------- */
+.hierarchy-parc {
+  font-weight: bold;
+  font-size: 18px;
+}
+.hierarchy-client {
+  font-weight: bold;
+  font-size: 16px;
+}
+.hierarchy-site {
+  font-weight: normal;
+  font-size: 16px;
+}
+.hierarchy-espace {
+  font-weight: normal;
+  font-size: 14px;
+}
+
+/* --------- RESET DE BASE --------- */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0px;
+  box-sizing: border-box;
+}
+
+/* --------- BARRE DE MENU HORIZONTALE --------- */
+.menu-bar {
+  background-color: #333;
+  height: 58px;
+  margin-bottom: 0;
+}
+.menu-item {
+  float: left;
+  display: block;
+  color: #f2f2f2;
+  padding: 20px 50px;
+  text-decoration: none;
+  align-items: center;
+  border-right: #aaaaaa dashed 2px;
+}
+.menu-item:hover {
+  background-color: #ddd;
+  color: black;
+}
+/* Bouton de déconnexion */
+.logout-button {
+  float: right;
+  background-color: rgb(70, 70, 70);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  margin: 8px 16px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.logout-button:hover {
+  background-color: darkred;
+}
+.logout-logo {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}
+
+/* --------- SIDEBAR --------- */
+
+/* Liste de la sidebar */
+#sidebar-placeholder ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* Style général pour les liens */
+#sidebar-placeholder li > a {
+  display: block;
+  padding: 5px;
+  text-decoration: none;
+  color: #333;
+  border-radius: 5px;
+}
+#sidebar-placeholder li > a:hover {
+  background-color: #eee;
+}
+#sidebar-placeholder li {
+  margin: 1px 0;
+  padding: 0;
+}
+/* Sous-listes cachées par défaut */
+#sidebar-placeholder li ul {
+  display: none;
+  margin-left: 1rem;
+}
+/* .open => déploie la sous-liste */
+#sidebar-placeholder li.open > ul {
+  display: block;
+}
+/* Survol : ne colore que le lien lui-même, pas le parent */
+#sidebar-placeholder li > a:hover {
+  background-color: #eee;
+}
+/* Quand un item est sélectionné */
+#sidebar-placeholder li.selected > a {
+  background-color: #aadaff; /* bleu clair */
+}
+/* Dans la sidebar, ul ul sont cachés par défaut */
+#sidebar-placeholder ul ul {
+  display: none;
+}
+
+/* Flèches sur les éléments parent (has-children) */
+.has-children > a::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 4px;
+  transition: transform 0.2s ease;
+  font-size: 1.4rem;
+}
+.has-children.open > a::before {
+  content: "▾";
+  font-size: 1.4rem;
+}
+
+/* --------- BARRE DE RECHERCHE --------- */
+.hierarchy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+/* Conteneur flex pour aligner le bouton et la recherche */
+#search-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px; /* Espace entre le bouton et la recherche */
+}
+
+/* Ajustement du bouton */
+#search-toggle-btn {
+  padding: 5px 10px;
+  white-space: nowrap; /* Empêche le bouton de se réduire */
+}
+
+/* Ajustement de la barre de recherche */
+#search-bar {
+  flex-grow: 1; /* Prend tout l'espace disponible */
+}
+#search-input {
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.search-divider {
+  width: 100%;
+  height: 1px;
+  margin: 12px 0;
+  margin-bottom: 6px;
+  background: linear-gradient(to right, transparent, #505050, transparent);
+}
+
+
+
+/* --------- CONTENU PRINCIPAL --------- */
+.content {
+  margin-left: 290px; /* Laisse la place à la sidebar */
+  padding: 10px;
+}
+/* Titres, paragraphes, etc. */
+h2 {
+  text-align: center;
+  margin-top: 0px;
+  margin-bottom: 0px;
+  width: 70%;
+
+}
+
+
+
+
+
+
+
+
+/* --------- SIDEBAR --------- */
+#sidebar {
+  position: fixed;
+  top: 58px;
+  left: 0px; /* Alignée sur le bord gauche */
+  width: 280px;
+  height: calc(100vh - 58px);
+  background-color: #ffffff;
+  padding: 15px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  border-radius: 8px 0 0 8px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  transition: left 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+/* Conteneur du titre et du bouton */
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Place le titre à gauche et le bouton à droite */
+  padding-bottom: 10px;
+}
+
+/* Quand la sidebar est fermée */
+#sidebar.collapsed {
+  left: -230px; /* Ne disparaît pas complètement */
+  box-shadow: none;
+}
+
+#sidebar-placeholder.collapsed {
+  width: 50px; /* Devient aussi petit que la barre grise */
+}
+
+/* Barre grise pour rouvrir la sidebar */
+#collapsed-sidebar {
+  position: fixed;
+  top: 58px;
+  left: 0px; /* Collée sur le bord gauche */
+  width: 50px;
+  height: calc(100vh - 58px);
+  background: linear-gradient(to right, #555, #777);
+  cursor: pointer;
+  display: none; /* ⚠️ Cachée par défaut */
+  align-items: center;
+  justify-content: center;
+  transition: left 0.3s ease-in-out, background 0.3s ease-in-out;
+  border-radius: 0 8px 8px 0;
+}
+
+/* Quand la sidebar est cachée, la barre devient visible */
+#collapsed-sidebar.visible {
+  display: flex; /* ⚠️ On remplace `left: 0;` par `display: flex;` */
+}
+
+/* Mise à jour du content pour occuper plus d'espace quand la sidebar est fermée */
+.content {
+  margin-left: 300px; /* Laisse la place à la sidebar */
+  padding: 10px;
+  transition: margin-left 0.3s ease-in-out;
+}
+
+.content.sidebar-collapsed {
+  margin-left: 60px; /* Quand la sidebar est fermée, plus d'espace */
+}
+
+/* Nouvelle étiquette plus propre */
+#sidebar-label {
+  position: absolute;
+  top: 15px;
+  left: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 2px;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 6px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Icône de l'étiquette */
+#sidebar-label::before {
+  content: "📂";
+  font-size: 16px;
+}
+
+/* Style du bouton pour fermer la sidebar */
+#toggle-sidebar-btn {
+  background: #ccc;
+  border: none;
+  padding: 5px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: background 0.2s ease-in-out;
+  width: 30%;
+}
+
+#toggle-sidebar-btn:hover {
+  background: #bbb;
+}

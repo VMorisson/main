@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion Firebase en JS Natif</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1 id="connexion-title">Connexion</h1>
+  <form id="login-form">
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Mot de passe" required>
+    <button type="submit">Se connecter</button>
+  </form>
+  <p id="message"></p>
+
+  <script type="module">
+    // Importer Firebase depuis le module installé (la configuration se trouve dans firebaseConfig.js)
+    import { auth } from "./config/firebaseConfig.js";
+    import { signInWithEmailAndPassword } from "firebase/auth";
+
+    const loginForm = document.getElementById("login-form");
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          document.getElementById("message").textContent = "Connexion réussie ! Redirection...";
+          window.location.href = "pages/accueil.html";
+        })
+        .catch((error) => {
+          document.getElementById("message").textContent = "Erreur : " + error.message;
+          console.error("Erreur de connexion:", error);
+        });
+    });
+  </script>
+</body>
+</html>

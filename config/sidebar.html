@@ -1,0 +1,79 @@
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">
+      <h2>Listing Parc</h2>
+      <button id="toggle-sidebar-btn">⏴</button>
+    </div>
+    <div id="search-container">
+      <button id="search-toggle-btn">Rechercher</button>
+      <div id="search-bar" style="display: none;">
+        <input id="search-input" placeholder="Rechercher...">
+      </div>
+    </div>
+    <div class="search-divider"></div>
+  </div>
+
+  <div id="parc-content"></div>
+</div>
+
+
+<!-- Barre visible lorsqu'elle est rabattue -->
+<div id="collapsed-sidebar">
+  <div id="sidebar-label"></div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("✅ Script chargé et prêt.");
+
+    const sidebar = document.getElementById("sidebar");
+    const collapsedSidebar = document.getElementById("collapsed-sidebar");
+    const toggleButton = document.getElementById("toggle-sidebar-btn");
+    const content = document.querySelector(".content");
+
+    if (!sidebar || !collapsedSidebar || !toggleButton || !content) {
+      console.error("❌ Un des éléments nécessaires n'a pas été trouvé !");
+      return;
+    }
+
+    console.log("✅ Éléments trouvés :", { sidebar, collapsedSidebar, toggleButton, content });
+
+    // ⚠️ Assurer que la barre grise est cachée au chargement
+    collapsedSidebar.style.display = "none";
+
+    // Fonction pour afficher les classes actuelles
+    function logClasses() {
+      console.log("📌 Classes actuelles:");
+      console.log("- sidebar:", sidebar.classList);
+      console.log("- collapsed-sidebar:", collapsedSidebar.classList);
+      console.log("- content:", content.classList);
+    }
+
+    // Rabattre la sidebar
+    toggleButton.addEventListener("click", function () {
+      console.log("▶️ Bouton de repli cliqué !");
+      
+      sidebar.classList.add("collapsed");
+      collapsedSidebar.style.display = "flex"; // Affiche la barre grise
+      content.classList.add("sidebar-collapsed");
+
+      logClasses();
+      console.log("✅ Sidebar rabattue.");
+    });
+
+    // Redéployer la sidebar
+    collapsedSidebar.addEventListener("click", function () {
+      console.log("▶️ Barre réduite cliquée !");
+      
+      sidebar.classList.remove("collapsed");
+      collapsedSidebar.style.display = "none"; // Cache la barre grise
+      content.classList.remove("sidebar-collapsed");
+
+      logClasses();
+      console.log("✅ Sidebar réouverte.");
+    });
+
+    // Vérifier les classes après chargement
+    logClasses();
+  });
+</script>
