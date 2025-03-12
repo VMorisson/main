@@ -2,17 +2,17 @@
 const mongoose = require('mongoose');
 
 // Connexion à MongoDB en local
-//mongoose.connect('mongodb://localhost:27017/laurea-integration')
-//  .then(() => console.log("Connecté à MongoDB !"))
-//  .catch(err => console.error("Erreur lors de la connexion à MongoDB :", err));
+mongoose.connect('mongodb://localhost:27017/laurea-integration')
+  .then(() => console.log("Connecté à MongoDB !"))
+  .catch(err => console.error("Erreur lors de la connexion à MongoDB :", err));
 
 // Connexion à MongoDB via la variable d'environnement définie par Railway  
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log("MongoDB connecté via Railway !"))
-.catch((err) => console.error("Erreur lors de la connexion à MongoDB via Railway :", err));  
+//mongoose.connect(process.env.MONGODB_URI, {
+//  useNewUrlParser: true,
+//  useUnifiedTopology: true,
+//})
+//.then(() => console.log("MongoDB connecté via Railway !"))
+//.catch((err) => console.error("Erreur lors de la connexion à MongoDB via Railway :", err));  
 
 // Schéma du Parc
 const parcSchema = new mongoose.Schema({
