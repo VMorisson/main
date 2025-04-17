@@ -15,26 +15,40 @@
   <p id="message"></p>
 
   <script type="module">
-    // Importer Firebase depuis le module installé (la configuration se trouve dans firebaseConfig.js)
-    import { auth } from "./config/firebaseConfig.js";
-    import { signInWithEmailAndPassword } from "firebase/auth";
-
+    // 1) Import des SDK Firebase depuis le CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+  
+    // 2) Votre config Firebase (ou import+CORS safe)
+    const firebaseConfig = {
+      apiKey: "…",
+      authDomain: "…",
+      projectId: "…",
+      storageBucket: "…",
+      messagingSenderId: "…",
+      appId: "…"
+    };
+  
+    // 3) Initialisation
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+  
+    // 4) Votre logique de connexion
     const loginForm = document.getElementById("login-form");
-    loginForm.addEventListener("submit", (e) => {
+    loginForm.addEventListener("submit", async e => {
       e.preventDefault();
-      const email = document.getElementById("email").value;
+      const email    = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-
-      signInWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          document.getElementById("message").textContent = "Connexion réussie ! Redirection...";
-          window.location.href = "pages/accueil.html";
-        })
-        .catch((error) => {
-          document.getElementById("message").textContent = "Erreur : " + error.message;
-          console.error("Erreur de connexion:", error);
-        });
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "pages/accueil.html";
+      } catch (error) {
+        document.getElementById("message").textContent = "Erreur : " + error.message;
+      }
     });
   </script>
+  
 </body>
 </html>
