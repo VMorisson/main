@@ -1,7 +1,7 @@
 // db.js
 
 
-const mongoose = require('mongoose');
+//const mongoose = require('mongoose');
 // Connexion à MongoDB en local
 //mongoose.connect('mongodb://localhost:27017/laurea-integration')
 //  .then(() => console.log("Connecté à MongoDB !"))
@@ -9,14 +9,16 @@ const mongoose = require('mongoose');
 
 // URI de connexion (MongoDB Atlas ou local en fallback)
 //const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/laurea-integration';
-const uri = "mongodb+srv://KwAMK9x7OOzJiqQN:morissonvic@laureaintegration.wcvsdov.mongodb.net/laurea-integration?retryWrites=true&w=majority&appName=LaureaIntegration";
-// Connexion à MongoDB via Mongoose
-console.log(">>> MONGODB_URI =", process.env.MONGODB_URI);
-mongoose
-  .connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+//const uri = "mongodb+srv://morissonvic:KwAMK9x7OOzJiqQN@laureaintegration.wcvsdov.mongodb.net/?retryWrites=true&w=majority&appName=LaureaIntegration";
+// config/db.js
+require('dotenv').config();           // ← charge .env quand tu es en local
+const mongoose = require('mongoose');
+
+// URI lue uniquement depuis les variables d’environnement
+const uri = process.env.MONGODB_URI;
+
+// Connexion MongoDB (plus besoin des options dépréciées)
+mongoose.connect(uri)
   .then(() => console.log('✅ MongoDB connecté via Mongoose'))
   .catch(err => console.error('❌ Erreur connexion MongoDB via Mongoose :', err));
 
