@@ -9,8 +9,9 @@ const mongoose = require('mongoose');
 
 // URI de connexion (MongoDB Atlas ou local en fallback)
 //const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/laurea-integration';
-const uri = "mongodb+srv://LV1fHOxE3CdUF1PI:morissonvic@laureaintegration.wcvsdov.mongodb.net/?retryWrites=true&w=majority&appName=LaureaIntegration";
+const uri = "mongodb+srv://LV1fHOxE3CdUF1PI:morissonvic@laureaintegration.wcvsdov.mongodb.net/laurea-integration?retryWrites=true&w=majority&appName=LaureaIntegration";
 // Connexion à MongoDB via Mongoose
+console.log(">>> MONGODB_URI =", process.env.MONGODB_URI);
 mongoose
   .connect(uri, {
     useNewUrlParser: true,
