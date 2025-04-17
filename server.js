@@ -166,13 +166,10 @@ app.delete('/api/interventions/:id', async (req, res) => {
 });
 
 
-app.listen(3000, () => {
-  console.log("Serveur API démarré sur le port 3000");
+const PORT = process.env.PORT || 3000;   // Render fournit PORT en prod
 
-  // Simulation d'un crash par surcharge CPU
-  //while (true) {
-  //    console.log("Je bloque le serveur...");
-  //}
+app.listen(PORT, () => {
+  console.log(`Serveur API démarré sur le port ${PORT}`);
 });
 
 
