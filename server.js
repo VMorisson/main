@@ -7,7 +7,7 @@ const app = express();
 const { ObjectId } = require('mongoose').Types; // Importer ObjectId
 
 // Importation de la configuration MongoDB et des modèles
-const { Parc, Client, Site, Espace } = require('./config/db.js');
+const { Parc, Client, Site, Espace, Intervention} = require('./config/db.js');
 
 const cors = require('cors');
 app.use(cors());
@@ -97,6 +97,74 @@ app.get('/api/hierarchy', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
+
+// Route GET : Récupérer toutes les interventions
+app.get('/api/interventions', async (req, res) => {
+  try {
+    const interventions = await Intervention.find({});
+    res.json(interventions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route GET : Récupérer une intervention par son ID
+app.get('/api/interventions/:id', async (req, res) => {
+  try {
+    const intervention = await Intervention.findById(req.params.id);
+    if (!intervention) {
+      return res.status(404).json({ error: "Intervention non trouvée" });
+    }
+    res.json(intervention);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route POST : Créer une nouvelle intervention
+app.post('/api/interventions', async (req, res) => {
+  try {
+    console.log("Reçu dans req.body :", req.body); // Vérifiez que technicianRow y figure, par exemple "3"
+    const newIntervention = new Intervention(req.body);
+    const savedIntervention = await newIntervention.save();
+    res.status(201).json(savedIntervention);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route PUT : Mettre à jour une intervention existante
+app.put('/api/interventions/:id', async (req, res) => {
+  try {
+    const updatedIntervention = await Intervention.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!updatedIntervention) {
+      return res.status(404).json({ error: "Intervention non trouvée" });
+    }
+    res.json(updatedIntervention);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route DELETE : Supprimer une intervention
+app.delete('/api/interventions/:id', async (req, res) => {
+  try {
+    const deletedIntervention = await Intervention.findByIdAndDelete(req.params.id);
+    if (!deletedIntervention) {
+      return res.status(404).json({ error: "Intervention non trouvée" });
+    }
+    res.json({ message: "Intervention supprimée" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.listen(3000, () => {
   console.log("Serveur API démarré sur le port 3000");

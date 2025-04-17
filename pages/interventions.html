@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Interventions Techniciens</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../stylesCalendar.css" />
+    <style>
+      /* Styles pour l'overlay de chargement */
+      #loading-container {
+        position: fixed;
+        top: 58px;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgb(255, 255, 255);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        flex-direction: column;
+      }
+      #loading-container h2 {
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+      }
+      /* Barre de progression simple */
+      #progress-bar {
+        width: 80%;
+        max-width: 400px;
+        height: 20px;
+        background-color: #eee;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      #progress-fill {
+        width: 0%;
+        height: 100%;
+        background-color: #4285F4;
+        animation: progressAnimation 2s infinite;
+      }
+      @keyframes progressAnimation {
+        0% { width: 0%; }
+        50% { width: 80%; }
+        100% { width: 0%; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- En-tête dynamique -->
+    <div id="header-placeholder"></div>
+
+    <!-- Overlay de chargement (au-dessus de tout) -->
+    <div id="loading-container">
+      <h2>Planning des interventions en chargement...</h2>
+      <div id="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+    </div>
+
+    <main>
+      <!-- Contenu de la page -->
+      <div id="calendar-container">
+        <!-- L'endroit où on injecte displayCalendar.html -->
+        <div id="calendar-placeholder"></div>
+      </div>
+    </main>
+
+    <!-- Script de chargement -->
+    <script type="module">
+      import { auth } from "../config/firebaseConfig.js";
+      import { onAuthStateChanged } from "firebase/auth";
+      import { initInactivityLogout } from "../config/inactivityLogout.js";
+      import { loadHeader } from "../config/loadHeader.js";
+      import { initCalendar } from "../calendar/initCalendar.js";
+
+      // Vérifier l'authentification : si l'utilisateur n'est pas connecté, redirige
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          window.location.href = "../index.html";
+        }
+      });
+
+      // Charger le header dynamique
+      loadHeader();
+
+      // Charger le contenu du calendrier et l'initialiser
+      fetch("../calendar/displayCalendar.html")
+        .then((res) => res.text())
+        .then((html) => {
+          // Injecter le HTML dans le placeholder
+          document.getElementById("calendar-placeholder").innerHTML = html;
+          // Appeler initCalendar.
+          // On suppose que initCalendar retourne une Promise ; sinon, vous pouvez l'envelopper dans setTimeout.
+          initCalendar().then(() => {
+            // Masquer l'overlay de chargement dès que le calendrier est initialisé
+            const loadContainer = document.getElementById("loading-container");
+            if (loadContainer) loadContainer.style.display = "none";
+          });
+        })
+        .catch((err) => {
+          console.error("Erreur lors du chargement du calendrier :", err);
+        });
+
+      // Déconnexion automatique après 10 minutes d’inactivité
+      initInactivityLogout(600000);
+    </script>
+
+    <!-- Menu contextuel -->
+    <div id="context-menu" class="custom-context-menu" style="display:none;">
+      <ul>
+        <li id="menu-add">➕ Ajouter intervention</li>
+        <li id="menu-show" style="display:none;">📄 Afficher intervention</li>
+        <li id="menu-delete" style="display:none;">🗑️ Supprimer intervention</li>
+        <li id="menu-divider" class="menu-divider" style="display:none;"></li>
+        <li id="menu-toggle-aller" style="display:none;">⬅ Ajouter Trajet Aller</li>
+        <li id="menu-toggle-retour" style="display:none;">Ajouter Trajet Retour ➡</li>
+      </ul>
+    </div>
+
+    <!-- Boîte modale (overlay + conteneur) -->
+    <div class="modal-overlay" id="form-modal" style="display:none;">
+      <div class="modal-dialog">
+        <h3 id="form-title">Ajouter une intervention</h3>
+
+        <div class="modal-field">
+          <label for="form-ticketName">Ticket :</label>
+          <input type="text" id="form-ticketName" />
+        </div>
+
+        <div class="modal-field">
+          <label for="form-clientName">Client :</label>
+          <input type="text" id="form-clientName" />
+        </div>
+
+        <div class="modal-field">
+          <label for="form-ville">Ville :</label>
+          <input type="text" id="form-ville" />
+        </div>
+
+        <div class="modal-field">
+          <label>Techniciens :</label>
+          <div>
+            <label><input type="checkbox" name="tech" value="1"> Tech 1</label>
+            <label><input type="checkbox" name="tech" value="2"> Tech 2</label>
+            <label><input type="checkbox" name="tech" value="3"> Tech 3</label>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <label>Trajet left :</label>
+          <input type="checkbox" id="form-leftTrajet" />
+        </div>
+
+        <div class="modal-field">
+          <label>Trajet right :</label>
+          <input type="checkbox" id="form-rightTrajet" />
+        </div>
+
+        <div class="modal-buttons">
+          <button id="form-save-btn">Enregistrer</button>
+          <button id="form-cancel-btn">Annuler</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

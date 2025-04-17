@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Interventions Techniciens</title>
+  <!-- On importe le CSS simplifié -->
+  <link rel="stylesheet" href="./stylesCalendar.css">
+</head>
+<body>
+  <h1>Planning des Interventions</h1>
+  <!-- Barre d’outils : un bouton + un champ date, si tu veux scroller -->
+  <div class="calendar-header-controls">
+    <button id="scroll-today-btn">Aujourd’hui</button>
+    <input type="text" id="goto-date" maxlength="5" placeholder="jj/mm">
+  </div>
+  
+  <!-- Conteneur scrollable -->
+  <div class="timeline-scroll">
+    <div id="expand-left-zone" class="expand-zone left">
+      <button id="expand-left-btn">+</button>
+    </div>
+    <div class="zone-calendar">
+      <div id="day-labels"></div>
+      <div id="header-timeline"></div>    
+
+      <!-- 3) Les lignes techniciens -->
+      <div id="calendar">
+        <!-- LIGNE DU TECHNICIEN 1 -->
+        <div class="technician-row">
+          <div class="timeline-content"></div>
+        </div>
+        <!-- LIGNE DU TECHNICIEN 2 -->
+        <div class="technician-row">
+          <div class="timeline-content"></div>
+        </div>
+        <!-- LIGNE DU TECHNICIEN 3 -->
+        <div class="technician-row">
+          <div class="timeline-content"></div>
+        </div>
+        <!-- Ajoute autant de lignes que nécessaire -->
+      </div>
+    </div>
+    <div id="expand-right-zone" class="expand-zone right">
+      <button id="expand-right-btn">+</button>
+    </div>
+  </div>
+
+  
+  <!-- Ton script principal, qui appelle initCalendar() -->
+  <script type="module" src="./initCalendar.js"></script>
+</body>
+</html>

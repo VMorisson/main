@@ -1,0 +1,376 @@
+/* ================================
+   Reset de base
+================================ */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0px;
+}
+
+/* ================================
+   Boutons et champ "goto-date"
+================================ */
+#scroll-today-btn {
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+#goto-date {
+  width: 45px;
+  padding: 4px;
+  font-size: 14px;
+  margin-left: 10px;
+  text-align: center;
+}
+
+/* ================================
+   Conteneur Scrollable (timeline)
+================================ */
+.timeline-scroll {
+  display: block;        /* ou flex, si tu préfères */
+  overflow-x: auto;      /* scroll horizontal */
+  border: 1px solid #ccc;
+  user-select: none;     /* évite la sélection de texte */
+  cursor: grab;          /* curseur "main qui attrape" */
+  position: relative;
+  margin-left: 10px;
+  margin-right: 10px;    /* si besoin d’absolus */
+  /* tu peux définir une hauteur:
+     height: 300px; 
+     ou laisser auto
+  */
+}
+.timeline-scroll.dragging {
+  cursor: grabbing;
+}
+
+/* ================================
+   En-tête : #header-timeline, #day-labels
+================================ */
+#header-timeline{
+position:relative;
+height: 30px;
+border-bottom: 2px solid #2d2d2d;
+/* width sera ajusté en JS */
+}
+
+#day-labels {
+  position: relative;
+  height: 30px;
+  border-bottom: 1px solid #2d2d2d;
+  /* width sera ajusté en JS */
+}
+
+/* ================================
+   Le calendrier principal
+================================ */
+#calendar {
+  position: relative;
+  /* pas de height fixe ici; 
+     la hauteur dépendra de tes .technician-row
+  */
+}
+
+/* ================================
+   Lignes de techniciens
+================================ */
+.technician-row {
+  position: relative;
+  height: 60px;
+  /* si tu veux une hauteur fixe:
+     height: 60px;
+  */
+}
+
+/* La zone où on dessine le fond + overlays */
+.timeline-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Le fond gris clair */
+.timeline-background {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #f4f4f4;
+  z-index: -1;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+}
+
+/* ================================
+   Blocs horaires
+================================ */
+.hour-block {
+  position: absolute;
+  top: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 13px;
+  line-height: 30px;
+  padding-left: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+  background-color: #f0f0f0;
+  color: #000;
+}
+
+.day-block {
+  position: absolute;
+  top: 0;
+  height: 30px;
+  background-color: #ddd;
+  font-weight: bold;
+  text-align: center;
+  line-height: 30px;
+  font-size: 14px;
+  border-right: 1px solid #aaa;
+  box-sizing: border-box;
+}
+
+/* Jour passé */
+.day-block.past-day {
+  background: linear-gradient(to bottom, #d0d0d0, #aaa);
+  color: #666;
+}
+
+/* Bloc Nuit et Weekend dans l’entête */
+.night-block {
+  background-color: #333;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.weekend-block {
+  background-color: #666;
+  color: #fff;
+  font-weight: bold;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================================
+   Lignes verticales (séparations)
+================================ */
+.hour-line {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background-color: rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+.hour-line.start-of-day {
+  width: 2px;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+/* ================================
+   Overlays weekend / nuit
+================================ */
+.weekend-overlay,
+.night-overlay {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.15);
+  z-index: 0;
+}
+
+/* ================================
+   Interventions (ex. .intervention)
+================================ */
+.intervention {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background-color: #ff9900;
+  color: white;
+  text-align: center;
+  padding: 1px;
+  cursor: move;
+  box-sizing: border-box;
+  border: 1px solid #000;
+  z-index: 100;
+  font-size: 10px;
+}
+
+/* Sous-blocs dans l’intervention 
+   (INST / client / ville)
+*/
+.intervention .inst-line {
+  font-weight: 900;
+}
+.intervention .client-line {
+  text-decoration: underline;
+}
+.intervention .ville-line {
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+
+/* Style commun à tous les trajets */
+.trajet-block {
+  position: absolute;
+  top: 5px;            /* pour être un peu plus bas que l'intervention */
+  height: 40px;        /* hauteur fixe */
+  line-height: 40px;   /* centre verticalement le contenu */
+  background-color: #444;  
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  z-index: 99;
+  border: 1px solid #000;
+  box-sizing: border-box;
+}
+
+/* Trajet direction LEFT */
+.trajet-left {
+  /* Couleur ou style différent pour left */
+  background-color: #666;    /* ou ce que tu veux */
+  border-right: 2px solid #000; 
+}
+
+/* Trajet direction RIGHT */
+.trajet-right {
+  /* Couleur ou style différent pour right */
+  background-color: #888;
+  border-left: 2px solid #000;
+}
+
+
+
+
+.custom-context-menu {
+  position: absolute;
+  display: none;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 9999;
+}
+.custom-context-menu ul {
+  list-style: none;
+  margin: 0; padding: 0;
+}
+.custom-context-menu li {
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.custom-context-menu li:hover {
+  background: #eee;
+}
+
+
+
+
+/* Overlay de fond : occupe tout l'écran, masque l'arrière-plan */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;         /* Par défaut masqué */
+  align-items: center;   /* Centre vertical */
+  justify-content: center; /* Centre horizontal */
+  z-index: 2000;         /* Devant le calendrier */
+}
+
+/* La boîte (dialog) elle-même */
+.modal-dialog {
+  background: #fff;
+  padding: 16px;
+  border-radius: 4px;
+  width: 320px;          /* Largeur fixe ou adaptative */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.modal-dialog h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.modal-field {
+  display: flex;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.modal-field label {
+  width: 100px;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+.modal-field input[type="text"] {
+  flex: 1; 
+  padding: 4px;
+  font-size: 14px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+
+
+
+
+
+.expand-zone {
+  position: absolute;
+  top: 0;
+  width: 30px;
+  height: 100%;
+  background: rgba(240, 240, 240, 0.8);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#expand-left-btn,
+#expand-right-btn {
+  width: 24px;
+  height: 24px;
+  font-weight: bold;
+  border: none;
+  border-radius: 50%;
+  background: #ddd;
+  cursor: pointer;
+}
+
+.timeline-scroll {
+  position: relative;
+  height: 100%; /* Required for absolute children like the expand zones */
+}
+
+.zone-calendar {
+  padding-left: 30px;
+}
+
+
+.menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: #ccc;
+  pointer-events: none;
+}
+
