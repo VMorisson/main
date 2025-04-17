@@ -53,7 +53,8 @@ export class DataManager {
      * @returns {Promise<Array>} Renvoie this.interventions (tableau d'objets)
      */
     async loadInterventions(start, end) { //LV1fHOxE3CdUF1PI morissonvic
-      const url = `http://localhost:3000/api/interventions?start=${start.toISOString()}&end=${end.toISOString()}`;
+      const url = `/api/interventions?start=${start.toISOString()}&end=${end.toISOString()}`;
+      //http://localhost:3000
       try {
         const response = await fetch(url);
         if (!response.ok) return [];
