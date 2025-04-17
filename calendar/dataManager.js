@@ -184,7 +184,7 @@ export class DataManager {
   
       if (intervention._id) {
         // PUT (mise à jour)
-        const url = `http://localhost:3000/api/interventions/${intervention._id}`;
+        const url = `/api/interventions/${intervention._id}`;
         try {
           const resp = await fetch(url, {
             method: 'PUT',
@@ -208,7 +208,7 @@ export class DataManager {
         }
       } else {
         // POST (création)
-        const url = `http://localhost:3000/api/interventions`;
+        const url = `/api/interventions`;
         try {
           const resp = await fetch(url, {
             method: 'POST',
@@ -266,7 +266,7 @@ export class DataManager {
         console.warn("Impossible de supprimer, pas d'_id:", intervention);
         return false;
       }
-      const url = `http://localhost:3000/api/interventions/${intervention._id}`;
+      const url = `/api/interventions/${intervention._id}`;
   
       try {
         const resp = await fetch(url, {
