@@ -4,6 +4,18 @@
   <meta charset="UTF-8">
   <title>Parc Matériel</title>
   <link rel="stylesheet" href="../styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app":       "/node_modules/firebase/app/dist/index.esm.js",
+        "firebase/auth":      "/node_modules/firebase/auth/dist/index.esm.js",
+        "firebase/firestore": "/node_modules/firebase/firestore/dist/index.esm.js"
+      }
+    }
+    </script>
+    <!-- Polyfill pour navigateurs plus anciens (10 kB) -->
+    <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.min.js"></script>
+
 </head>
 <body>
   <!-- Header commun -->
