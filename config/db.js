@@ -11,6 +11,10 @@
 //const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/laurea-integration';
 //const uri = "mongodb+srv://morissonvic:KwAMK9x7OOzJiqQN@laureaintegration.wcvsdov.mongodb.net/?retryWrites=true&w=majority&appName=LaureaIntegration";
 // config/db.js
+console.log('[DB] Chargement fichier :', __filename);
+console.log('[DB] Build timestamp   :', new Date().toISOString());
+require('dotenv').config();
+
 require('dotenv').config();           // ← charge .env quand tu es en local
 const mongoose = require('mongoose');
 
