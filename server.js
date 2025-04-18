@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // Servir l'ensemble du projet depuis la racine
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname)));
 
 // Servir explicitement le dossier node_modules
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
