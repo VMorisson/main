@@ -21,6 +21,7 @@ const mongoose = require('mongoose');
 // URI lue uniquement depuis les variables d’environnement
 const uri = process.env.MONGODB_URI;
 console.log('[DB] MONGODB_URI =', process.env.MONGODB_URI ? 'définie ✅' : 'indéfinie ❌');
+
 // Connexion MongoDB (plus besoin des options dépréciées)
 mongoose.connect(uri)
   .then(() => console.log('✅ MongoDB connecté via Mongoose'))
