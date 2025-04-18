@@ -3,8 +3,8 @@
 // 1) On importe isWeekend (si nécessaire) depuis dateHelpers.js
 import { isWeekend, dayStart, dayEnd, pixelsPerHourDay, nightWidth, weekendWidth } from './dateHelpers.js';
 import interact from 'interactjs';
-import { onAuthStateChanged } from "firebase/auth"; // Assurez-vous d'importer votre fonction d'authentification
-import { doc, getDoc } from "firebase/firestore";   // et les fonctions Firestore
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { auth, db } from "../config/firebaseConfig.js"; // ajustez selon votre config
 /* =========================================================
    REPRISE EXACTE DES TROIS FONCTIONS D'ORIGINE

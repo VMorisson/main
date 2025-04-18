@@ -1,5 +1,5 @@
 // sidebarHierarchy.js
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { auth, db } from '../config/firebaseConfig.js';
 
 let originalHierarchy = [];
@@ -13,7 +13,7 @@ export async function loadParcHierarchy() {
   container.innerHTML = '';
 
   try {
-    const res = await fetch('http://localhost:3000/api/hierarchy');
+    const res = await fetch('/api/hierarchy');
     if (!res.ok) throw new Error('Erreur HTTP ' + res.status);
 
     originalHierarchy = await res.json();
