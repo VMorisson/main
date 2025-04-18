@@ -22,7 +22,7 @@ export async function loadHeader() {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         console.warn("Aucun utilisateur connecté.");
-        return;
+        window.location.href = "../index.html";
       }
 
       const userDocRef = doc(db, "users", user.uid);
