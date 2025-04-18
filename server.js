@@ -167,7 +167,8 @@ app.delete('/api/interventions/:id', async (req, res) => {
 
 
 const PORT = process.env.PORT || 3000;   // Render fournit PORT en prod
-
+console.log('[APP] Mode        :', process.env.NODE_ENV || 'non défini');
+console.log('[APP] Port rendu  :', process.env.PORT);
 app.listen(PORT, () => {
   console.log(`Serveur API démarré sur le port ${PORT}`);
 });
