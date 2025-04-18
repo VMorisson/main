@@ -1,6 +1,6 @@
 import { auth, db } from "../config/firebaseConfig.js";
-import { doc, getDoc } from "firebase/firestore";
-import { signOut, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
 export async function loadHeader() {
   try {
