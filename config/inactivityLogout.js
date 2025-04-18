@@ -1,5 +1,5 @@
 // config/inactivityLogout.js
-import { getAuth, signOut } from "firebase/auth";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
 export function initInactivityLogout() {
   let authInstance;
