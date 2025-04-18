@@ -4,24 +4,6 @@
   <meta charset="UTF-8">
   <title>Connexion Firebase en JS Natif</title>
   <link rel="stylesheet" href="styles.css">
-  <script type="importmap">
-    {
-      "imports": {
-        /* méta‑paquets */
-        "firebase/app":       "/node_modules/firebase/app/dist/index.esm.js",
-        "firebase/auth":      "/node_modules/firebase/auth/dist/index.esm.js",
-        "firebase/firestore": "/node_modules/firebase/firestore/dist/index.esm.js",
-    
-        /* vrais paquets (préfixe @firebase) */
-        "@firebase/app":       "/node_modules/@firebase/app/dist/esm/index.esm.js",
-        "@firebase/auth":      "/node_modules/@firebase/auth/dist/esm/index.esm.js",
-        "@firebase/firestore": "/node_modules/@firebase/firestore/dist/esm/index.esm.js"
-      }
-    }
-    </script>
-    <!-- Polyfill pour navigateurs plus anciens (10 kB) -->
-    <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.min.js"></script>
-
 </head>
 <body>
   <h1 id="connexion-title">Connexion</h1>
@@ -33,12 +15,12 @@
   <p id="message"></p>
 
   <script type="module">
-    // 1) Import des SDK Firebase depuis le CDN
-    import { initializeApp } from "firebase/app";
-    import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-    import { getFirestore } from "firebase/firestore";
-    //import firebaseConfig from "./config/firebaseConfig.js"; // Importez votre config Firebase ici (ou utilisez CORS safe)
-  
+    /* 1) On importe auth/db depuis le fichier de config */
+  import { auth } from "../config/firebaseConfig.js";
+
+/* 2) On importe ce dont on a besoin depuis le CDN */
+  import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    
     // 2) Votre config Firebase (ou import+CORS safe)
     const firebaseConfig = {
       apiKey: "AIzaSyA3ntqe60xKcnlb7mBRuh5WHqlxlLwKAfg",
