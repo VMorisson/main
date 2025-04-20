@@ -17,9 +17,12 @@
  *    Si tu déploies ailleurs, change l'URL par la bonne.
  */
 
-const API_BASE = import.meta.env.PROD           // Vite ou “undefined” si pas de bundler
-      ? window.location.origin     // en prod : même host
-      : "http://localhost:3000";  // en dev : API locale
+const IS_PROD = typeof window !== "undefined" &&
+                window.location.hostname !== "localhost";
+
+const API_BASE = IS_PROD
+  ? window.location.origin
+  : "http://localhost:3000";
 
 
 
