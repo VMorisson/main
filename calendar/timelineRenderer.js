@@ -634,10 +634,10 @@ export class TimelineRenderer {
         if (scrollContainer) {
           scrollContainer.scrollLeft = currentScrollLeft;
         }
-  
+        const now = new Date();
         lastUpdate = now;
       }
-    }, 15000);
+    }, 10000);
   }  
 }
 
