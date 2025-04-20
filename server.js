@@ -103,7 +103,17 @@ app.get('/api/hierarchy', async (req, res) => {
 // Route GET : Récupérer toutes les interventions
 app.get('/api/interventions', async (req, res) => {
   try {
-    const interventions = await Intervention.find({});
+    const { since } = req.query;
+    let filter = {};
+
+    if (since) {
+      const sinceDate = new Date(since);
+      if (!isNaN(sinceDate)) {
+        filter.dateModif = { $gt: sinceDate };
+      }
+    }
+
+    const interventions = await Intervention.find(filter);
     res.json(interventions);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -126,8 +136,9 @@ app.get('/api/interventions/:id', async (req, res) => {
 // Route POST : Créer une nouvelle intervention
 app.post('/api/interventions', async (req, res) => {
   try {
-    console.log("Reçu dans req.body :", req.body); // Vérifiez que technicianRow y figure, par exemple "3"
-    const newIntervention = new Intervention(req.body);
+    const data = req.body;
+    data.dateModif = new Date(); // Ajoute la date de modification
+    const newIntervention = new Intervention(data);
     const savedIntervention = await newIntervention.save();
     res.status(201).json(savedIntervention);
   } catch (error) {
@@ -138,9 +149,12 @@ app.post('/api/interventions', async (req, res) => {
 // Route PUT : Mettre à jour une intervention existante
 app.put('/api/interventions/:id', async (req, res) => {
   try {
+    const data = req.body;
+    data.dateModif = new Date(); // Met à jour la date de modification
+
     const updatedIntervention = await Intervention.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      data,
       { new: true, runValidators: true }
     );
     if (!updatedIntervention) {

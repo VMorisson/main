@@ -25,7 +25,10 @@ export async function initCalendar() {
   await timeline.initCalendarWithAuth(displayStart, displayEnd);
   await dataManager.loadInterventions(displayStart, displayEnd);
   timeline.renderAllInterventions();
-
+  
+  if (typeof timeline.startPollingUpdates === "function") {
+    timeline.startPollingUpdates();
+  }
   scrollToDate(new Date());
   enableHorizontalDragScroll(".timeline-scroll");
 
@@ -98,7 +101,6 @@ if (btnExpandRight) {
     // depuis dateHelpers.js et l’utilise. Ex:
     // const offset = getOffsetFromDate(date);
     // timelineScroll.scrollLeft = offset - 100;
-
     if (typeof timeline.getOffsetForDate === 'function') {
       const offset = timeline.getOffsetForDate(date);
       timelineScroll.scrollLeft = offset - 100;
@@ -184,3 +186,5 @@ if (btnExpandRight) {
   
   
 }
+
+

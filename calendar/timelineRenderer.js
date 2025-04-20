@@ -28,6 +28,7 @@ function generateHeader(dayStart, dayEnd, pixelsPerHourDay, dayWidth, nightWidth
   let date = new Date(window.calendarStart);
   
   while (date <= window.calendarEnd) {
+    const jourDate = new Date(date);
     const jourStart = totalWidth;
     const isPast = date < todayDateOnly;
     const dayClass = isPast ? "day-block past-day" : "day-block";
@@ -54,7 +55,7 @@ function generateHeader(dayStart, dayEnd, pixelsPerHourDay, dayWidth, nightWidth
             `<div class='hour-block invisible-block' style='left:${blockStart}px; width:${pixelsPerHourDay}px;'></div>`
           );
         }
-        window.heuresMap.push({ type: "hour", heure: h, start: blockStart, end: blockStart + pixelsPerHourDay, date: new Date(date) });
+        window.heuresMap.push({ type: "hour", heure: h, start: blockStart, end: blockStart + pixelsPerHourDay, date: new Date(jourDate) });
         totalWidth += pixelsPerHourDay;
       }
       hourContainer.insertAdjacentHTML("beforeend",
@@ -62,7 +63,7 @@ function generateHeader(dayStart, dayEnd, pixelsPerHourDay, dayWidth, nightWidth
             Nuit
          </div>`
       );
-      window.heuresMap.push({ type: "night", start: totalWidth, end: totalWidth + nightWidth, date: new Date(date) });
+      window.heuresMap.push({ type: "night", start: totalWidth, end: totalWidth + nightWidth, date: new Date(jourDate) });
       totalWidth += nightWidth;
     }
     
@@ -249,24 +250,32 @@ export class TimelineRenderer {
 
 
   setupDragResize(block, intervention) {
-    const self = this;  // pour pouvoir appeler updateTrajets / updateTrajetsDOM
+    const self = this;
   
     interact(block).draggable({
       listeners: {
         start: (event) => {
           block.dataset.initialLeft = parseFloat(block.style.left) || 0;
-          block.dataset.totalDx      = 0;
+          block.dataset.totalDx = 0;
         },
         move: (event) => {
-          // ——— calcul du newLeft comme avant ———
-          const totalDx  = parseFloat(block.dataset.totalDx) + event.dx;
+          const totalDx = parseFloat(block.dataset.totalDx) + event.dx;
           block.dataset.totalDx = totalDx;
           const initialLeft = parseFloat(block.dataset.initialLeft) || 0;
-          const newLeft     = Math.round((initialLeft + totalDx) / 15) * 15;
-          const width       = parseFloat(block.style.width);
+          const newLeft = Math.round((initialLeft + totalDx) / 15) * 15;
+          const width = parseFloat(block.style.width);
           if (newLeft < 0) return;
   
-          // ——— application au DOM (intervention et frères) ———
+          const newStart = computeDateTimeFromOffset(newLeft);
+          const newEnd = computeDateTimeFromOffset(newLeft + width);
+  
+          if (self.checkForOverlap(newStart, newEnd, intervention)) {
+            block.style.outline = "2px solid red";
+            return; // ← on bloque le move si collision détectée
+          } else {
+            block.style.outline = "none";
+          }
+  
           document
             .querySelectorAll(`.intervention[data-id="${intervention._id}"]`)
             .forEach(b => {
@@ -274,84 +283,87 @@ export class TimelineRenderer {
               b.style.width = `${width}px`;
             });
   
-          // ——— mise à jour des dates de l'intervention ———
-          const debut = computeDateTimeFromOffset(newLeft);
-          const fin   = computeDateTimeFromOffset(newLeft + width);
-          if (isNaN(debut) || isNaN(fin)) return;
-          intervention.dateDebut = debut;
-          intervention.dateFin   = fin;
-          //trajet.dureeTrajet = newEnd.getTime() - newStart.getTime();
-          // ——— recalcul et rendu *en temps réel* des trajets ———
+          intervention.dateDebut = newStart;
+          intervention.dateFin = newEnd;
+  
           self.updateTrajets(intervention);
           self.updateTrajetsDOM(intervention);
         },
         end: () => {
           if (!intervention.dateDebut || !intervention.dateFin) return;
+          block.style.outline = "none";
           window.dataManager
             .saveIntervention(intervention)
-            .then(() => window.timeline.renderAllInterventions());
+            .then(() => window.timeline.updateSingleIntervention(intervention));
         }
       }
     });
   
     interact(block).resizable({
-      edges: { left: true, right: true },
+      edges: {
+        left: block.querySelector(".resize-handle.left"),
+        right: block.querySelector(".resize-handle.right")
+      },
       listeners: {
         start(event) {
-          block._initialResizeLeft  = parseFloat(block.style.left)  || 0;
+          block._initialResizeLeft = parseFloat(block.style.left) || 0;
           block._initialResizeWidth = parseFloat(block.style.width) || 0;
-          block._resizeDeltaLeft    = 0;
-          block._resizeDeltaWidth   = 0;
+          block._resizeDeltaLeft = 0;
+          block._resizeDeltaWidth = 0;
         },
         move(event) {
-          // ——— accumulation des deltas ———
-          block._resizeDeltaLeft  += event.deltaRect.left  || 0;
+          block._resizeDeltaLeft += event.deltaRect.left || 0;
           block._resizeDeltaWidth += event.deltaRect.width || 0;
   
-          // ——— calcul des valeurs alignées sur la grille ———
-          let displayLeft  = block._initialResizeLeft;
+          let displayLeft = block._initialResizeLeft;
           let displayWidth = block._initialResizeWidth;
+  
           if (event.edges.left) {
-            displayLeft  = Math.round((block._initialResizeLeft + block._resizeDeltaLeft) / 15) * 15;
+            displayLeft = Math.round((block._initialResizeLeft + block._resizeDeltaLeft) / 15) * 15;
             displayWidth = Math.round((block._initialResizeWidth - block._resizeDeltaLeft) / 15) * 15;
           }
           if (event.edges.right) {
             displayWidth = Math.round((block._initialResizeWidth + block._resizeDeltaWidth) / 15) * 15;
           }
+  
           if (displayLeft < 0) {
             displayWidth += displayLeft;
             displayLeft = 0;
           }
   
-          // ——— application au DOM (intervention et frères) ———
+          const newStart = computeDateTimeFromOffset(displayLeft);
+          const newEnd = computeDateTimeFromOffset(displayLeft + displayWidth);
+  
+          if (self.checkForOverlap(newStart, newEnd, intervention)) {
+            block.style.outline = "2px solid red";
+            return;
+          } else {
+            block.style.outline = "none";
+          }
+  
           document
             .querySelectorAll(`.intervention[data-id="${intervention._id}"]`)
             .forEach(b => {
-              b.style.left  = `${displayLeft}px`;
+              b.style.left = `${displayLeft}px`;
               b.style.width = `${displayWidth}px`;
             });
   
-          // ——— mise à jour des dates de l'intervention ———
-          const debut = computeDateTimeFromOffset(displayLeft);
-          const fin   = computeDateTimeFromOffset(displayLeft + displayWidth);
-          if (isNaN(debut) || isNaN(fin)) return;
-          intervention.dateDebut = debut;
-          intervention.dateFin   = fin;
+          intervention.dateDebut = newStart;
+          intervention.dateFin = newEnd;
   
-          // ——— recalcul et rendu *en temps réel* des trajets ———
           self.updateTrajets(intervention);
           self.updateTrajetsDOM(intervention);
         },
         end() {
           if (!intervention.dateDebut || !intervention.dateFin) return;
+          block.style.outline = "none";
           window.dataManager
             .saveIntervention(intervention)
-            .then(() => window.timeline.renderAllInterventions());
+            .then(() => window.timeline.updateSingleIntervention(intervention));
         }
       }
     });
-  }
-  
+  }  
   setupDragResizeTrajet(trajetBlock, intervention, trajet) {
     const gridStep = 15;
 
@@ -405,6 +417,31 @@ export class TimelineRenderer {
       }
     });
   }
+  checkForOverlap(newStart, newEnd, currentIntervention) {
+    return window.dataManager.interventions.some(other => {
+      if (other._id === currentIntervention._id) return false;
+  
+      const sameRow = other.technicianRows.some(row =>
+        currentIntervention.technicianRows.includes(row)
+      );
+      if (!sameRow) return false;
+  
+      const startInside =
+        newStart >= other.dateDebut && newStart < other.dateFin;
+  
+      const endInside =
+        newEnd > other.dateDebut && newEnd <= other.dateFin;
+  
+      const engulfing =
+        newStart < other.dateDebut && newEnd > other.dateFin;
+  
+      return startInside || endInside || engulfing;
+    });
+  }
+  
+  
+  
+  
   
   
   updateTrajets(intervention) {
@@ -427,8 +464,7 @@ export class TimelineRenderer {
   
       return { ...t, dateDebut, dateFin, dureeTrajet: duration };
     });
-  }
-   
+  } 
   updateTrajetsDOM(intervention) {
     const interBlock = document.querySelector(`.intervention[data-id="${intervention._id}"]`);
     if (!interBlock) return;
@@ -479,6 +515,8 @@ export class TimelineRenderer {
         interDiv.style.left = `${offsetStart}px`;
         interDiv.style.width = `${width}px`;
         interDiv.innerHTML = `
+          <div class="resize-handle left"></div>
+          <div class="resize-handle right"></div>
           <div class="inst-line">${inter.ticketName || "Intervention"}</div>
           <div class="client-line">${inter.clientName || ""}</div>
           <div class="ville-line">${inter.ville || ""}</div>
@@ -511,7 +549,96 @@ export class TimelineRenderer {
       });
     });
   }
+  renderIntervention(inter) {
+    const offsetStart = computeOffsetFromDateTime(new Date(inter.dateDebut));
+    const offsetEnd = computeOffsetFromDateTime(new Date(inter.dateFin));
+    const width = offsetEnd - offsetStart;
+  
+    inter.technicianRows.forEach(rowId => {
+      const rowEl = document.querySelector(`#calendar .technician-row:nth-child(${rowId}) .timeline-content`);
+      if (!rowEl) return;
+  
+      const interDiv = document.createElement("div");
+      interDiv.className = "intervention";
+      interDiv.dataset.id = inter._id;
+      interDiv.style.position = "absolute";
+      interDiv.style.left = `${offsetStart}px`;
+      interDiv.style.width = `${width}px`;
+      interDiv.innerHTML = `
+        <div class="resize-handle left"></div>
+        <div class="resize-handle right"></div>
+        <div class="inst-line">${inter.ticketName || "Intervention"}</div>
+        <div class="client-line">${inter.clientName || ""}</div>
+        <div class="ville-line">${inter.ville || ""}</div>
+      `;
+  
+      rowEl.appendChild(interDiv);
+      this.setupDragResize(interDiv, inter);
+  
+      if (Array.isArray(inter.trajets)) {
+        inter.trajets.forEach(t => {
+          const trajetDiv = document.createElement("div");
+          trajetDiv.className = `trajet-block trajet-${t.direction}`;
+          trajetDiv.dataset.id = inter._id;
+          trajetDiv.style.position = "absolute";
+  
+          const msPerHour = 3600000;
+          const w = (t.dureeTrajet / msPerHour) * pixelsPerHourDay;
+          let left;
+          if (t.direction === 'left') {
+            left = offsetStart - w;
+          } else {
+            left = offsetStart + width;
+          }
+  
+          trajetDiv.style.left = `${left}px`;
+          trajetDiv.style.width = `${w}px`;
+          trajetDiv.textContent = "🚘";
+          rowEl.appendChild(trajetDiv);
+          this.setupDragResizeTrajet(trajetDiv, inter, t);
+        });
+      }
+    });
+  }
+  updateSingleIntervention(intervention) {
+    if (!intervention || !intervention._id) {
+      console.warn("❌ Intervention invalide ou sans ID :", intervention);
+      return;
+    }
 
+    // Supprimer les anciens blocs (intervention + trajets)
+    document.querySelectorAll(`.intervention[data-id="${intervention._id}"],
+                              .trajet-block[data-id="${intervention._id}"]`)
+      .forEach(el => el.remove());
+
+    // Ré-affiche l'intervention
+    this.renderIntervention(intervention);
+  }
+  //modifier renderAll et updateSingle de la même manière
+  
+
+
+  startPollingUpdates() {
+    let lastUpdate = new Date();
+  
+    setInterval(async () => {
+      //const now = new Date();
+      const scrollContainer = document.querySelector(".timeline-scroll");
+      const currentScrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
+  
+      const updated = await window.dataManager.pollNewInterventions(lastUpdate);
+      if (updated.length > 0) {
+        updated.forEach(i => window.timeline.updateSingleIntervention(i));
+  
+        // Restaurer la position du scroll
+        if (scrollContainer) {
+          scrollContainer.scrollLeft = currentScrollLeft;
+        }
+  
+        lastUpdate = now;
+      }
+    }, 15000);
+  }  
 }
 
 
@@ -680,8 +807,16 @@ menuToggleAller.addEventListener("click", async () => {
     });
   }
 
-  await window.dataManager.saveIntervention(interv);
-  window.timeline.renderAllInterventions();
+  const saved = await window.dataManager.saveIntervention(inter);
+  if (!saved) return;
+
+  const isNew = !intervId;
+
+  if (isNew) {
+    window.timeline.renderIntervention(saved); // création
+  } else {
+    window.timeline.updateSingleIntervention(saved); // mise à jour
+  }
 });
 }
 if (menuToggleRetour) {
@@ -708,9 +843,16 @@ menuToggleRetour.addEventListener("click", async () => {
       dureeTrajet: durMs
     });
   }
+  const saved = await window.dataManager.saveIntervention(inter);
+  if (!saved) return;
 
-  await window.dataManager.saveIntervention(interv);
-  window.timeline.renderAllInterventions();
+  const isNew = !intervId;
+
+  if (isNew) {
+    window.timeline.renderIntervention(saved); // création
+  } else {
+    window.timeline.updateSingleIntervention(saved); // mise à jour
+  }
 });
 }
 
@@ -792,6 +934,7 @@ if (saveBtn) {
   saveBtn.addEventListener("click", async () => {
     const modal = document.getElementById("form-modal");
     if (!modal) return;
+
     const intervId = modal.dataset.interventionId;
 
     // Champs
@@ -811,18 +954,16 @@ if (saveBtn) {
     // Si c'est une nouvelle intervention => on calcule dateDebut / dateFin
     let dateDebut, dateFin;
     if (!existing) {
-      // dateDebut et dateFin (ex. 1h de large) via lastContextOffsetX
       const { computeDateTimeFromOffset, pixelsPerHourDay } = await import("./dateHelpers.js");
       dateDebut = computeDateTimeFromOffset(lastContextOffsetX);
       dateFin   = computeDateTimeFromOffset(lastContextOffsetX + pixelsPerHourDay);
     } else {
-      // On reprend l'existant
       dateDebut = existing.dateDebut;
       dateFin   = existing.dateFin;
     }
 
     // Techniciens
-    const techArray = [...techChecks].map(chk => parseInt(chk.value,10));
+    const techArray = [...techChecks].map(chk => parseInt(chk.value, 10));
 
     // Trajets
     let trajets = [];
@@ -833,12 +974,12 @@ if (saveBtn) {
       trajets.push({
         direction: "left",
         dateDebut: startLeft,
-        dateFin:   endLeft,
-        type:      "voiture",
+        dateFin: endLeft,
+        type: "voiture",
         dureeTrajet: durationLeft
       });
     }
-    
+
     if (rightChk.checked) {
       const startRight = new Date(dateFin);
       const endRight   = addHoursToDate(dateFin, 1);
@@ -846,12 +987,11 @@ if (saveBtn) {
       trajets.push({
         direction: "right",
         dateDebut: startRight,
-        dateFin:   endRight,
-        type:      "voiture",
+        dateFin: endRight,
+        type: "voiture",
         dureeTrajet: durationRight
       });
     }
-    
 
     const newInter = {
       _id: intervId || undefined,
@@ -861,18 +1001,26 @@ if (saveBtn) {
       clientName: clientEl.value || "",
       ville: villeEl.value || "",
       technicianRows: techArray,
-      technician: techArray.length>1 
+      technicianRow: techArray.join(","), // ← le string que la BDD attend
+      technician: techArray.length > 1
         ? `Techniciens ${techArray.join(",")}`
         : `Technicien ${techArray[0] || 1}`,
       trajets
     };
 
-    // On sauvegarde
-    await window.dataManager.saveIntervention(newInter);
-    // On ré-affiche
-    window.timeline.renderAllInterventions();
+    const saved = await window.dataManager.saveIntervention(newInter);
+    if (!saved) {
+      console.warn("❌ Intervention non sauvegardée !");
+      return;
+    }
 
-    // Fermer la modale
+    if (!intervId) {
+      // C’est une nouvelle intervention
+      window.timeline.renderIntervention(saved);
+    } else {
+      window.timeline.updateSingleIntervention(saved);
+    }
+    // 💅 Fermeture de la modale
     modal.style.display = "none";
   });
 }

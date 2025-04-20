@@ -7,21 +7,19 @@
 //  .then(() => console.log("Connecté à MongoDB !"))
 //  .catch(err => console.error("Erreur lors de la connexion à MongoDB :", err));
 
-// URI de connexion (MongoDB Atlas ou local en fallback)
-//const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/laurea-integration';
-//const uri = "mongodb+srv://morissonvic:KwAMK9x7OOzJiqQN@laureaintegration.wcvsdov.mongodb.net/?retryWrites=true&w=majority&appName=LaureaIntegration";
-// config/db.js
 console.log('[DB] Chargement fichier :', __filename);
 console.log('[DB] Build timestamp   :', new Date().toISOString());
-require('dotenv').config();
 
-require('dotenv').config();           // ← charge .env quand tu es en local
+
+          // ← charge .env quand tu es en local
 const mongoose = require('mongoose');
 
-// URI lue uniquement depuis les variables d’environnement
-const uri = process.env.MONGODB_URI;
+// Switch en fonction de l'environnement (test ou prod render)
+//require('dotenv').config(); 
+//const uri = process.env.MONGODB_URI;
+require('dotenv').config({ path: '.env.local' });
+const uri = "mongodb+srv://laureadmin:L4URE4@laureaintegration.wcvsdov.mongodb.net/laureaintegration?retryWrites=true&w=majority&appName=LaureaIntegration";
 console.log('[DB] MONGODB_URI =', process.env.MONGODB_URI ? 'définie ✅' : 'indéfinie ❌');
-
 // Connexion MongoDB (plus besoin des options dépréciées)
 mongoose.connect(uri)
   .then(() => console.log('✅ MongoDB connecté via Mongoose'))
@@ -59,7 +57,8 @@ const interventionSchema = new mongoose.Schema({
   trajets: [{
     direction:   { type: String, enum: ['left','right'] },
     dureeTrajet: { type: Number } // en millisecondes
-  }]
+  }],
+  dateModif:     { type: Date, required: true },
 });
 
 // Création des modèles

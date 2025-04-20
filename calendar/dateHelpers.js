@@ -179,14 +179,25 @@ export function computeOffsetFromDateTime(dateTime) {
   if (!window.heuresMap || window.heuresMap.length === 0) return 0;
 
   const found = window.heuresMap.find(h => {
-    const sameDay = h.date.toDateString() === dateTime.toDateString();
-    return sameDay && h.type === "hour";
+    const hDateStr = h.date?.toDateString?.() || "(invalid)";
+    const dDateStr = dateTime?.toDateString?.() || "(invalid)";
+    const isSameDay = hDateStr === dDateStr;
+    const match = isSameDay && (h.type === "hour" || h.type === "weekend");  
+    return match;
   });
+  
+  
 
   if (!found) {
-    console.warn("Date hors plage générée:", dateTime);
-    return null; // ou retourne un clamp type 0 ou header max
+    console.warn("❌ Aucun segment trouvé pour:", dateTime.toString());
+    return 0;
   }
+  
+  //if (found.type === "weekend") {
+  // Offset au début du bloc weekend
+  //  return found.start;
+  //}
+  //enlevé pour cause problème offset au début jour suivant quand offset dans nuit/weekend
 
   const daySegments = window.heuresMap.filter(h => h.date.toDateString() === found.date.toDateString());
 
@@ -198,7 +209,7 @@ export function computeOffsetFromDateTime(dateTime) {
       const hourEnd = new Date(hourStart);
       hourEnd.setHours(seg.heure + 1);
 
-      if (dateTime >= hourStart && dateTime < hourEnd) {
+      if (dateTime >= hourStart && dateTime <= hourEnd){
         const elapsed = (dateTime - hourStart) / 3600000; // en heures
         offset += elapsed * pixelsPerHourDay;
         return seg.start + (elapsed * pixelsPerHourDay);
@@ -206,8 +217,9 @@ export function computeOffsetFromDateTime(dateTime) {
     }
     offset = seg.end;
   }
-
-  return offset;
+  // 🛟 Fallback si aucun segment n’a capté la date
+  console.warn("⛔ Aucun bloc 'hour' n’a capturé", dateTime, "→ fallback getOffsetFromDate()");
+  return getOffsetFromDate(dateTime);
 }
 
   

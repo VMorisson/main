@@ -17,6 +17,12 @@
  *    Si tu déploies ailleurs, change l'URL par la bonne.
  */
 
+const API_BASE = import.meta.env.PROD           // Vite ou “undefined” si pas de bundler
+      ? window.location.origin     // en prod : même host
+      : "http://localhost:3000";  // en dev : API locale
+
+
+
 export class DataManager {
     constructor() {
       /**
@@ -39,7 +45,8 @@ export class DataManager {
        */
       this.interventions = [];
     }
-  
+    
+     
     /**
      * Charge toutes les interventions entre "start" et "end" (dates).
      * NOTE: Dans ton server.js actuel, la route GET /api/interventions
@@ -52,8 +59,8 @@ export class DataManager {
      * @param {Date} end   - date de fin
      * @returns {Promise<Array>} Renvoie this.interventions (tableau d'objets)
      */
-    async loadInterventions(start, end) { //LV1fHOxE3CdUF1PI morissonvic
-      const url = `/api/interventions?start=${start.toISOString()}&end=${end.toISOString()}`;
+    async loadInterventions(start, end) { 
+      const url = `${API_BASE}/api/interventions?start=${start.toISOString()}&end=${end.toISOString()}`;
       //http://localhost:3000
       try {
         const response = await fetch(url);
@@ -76,9 +83,9 @@ export class DataManager {
      * @param {Object} raw - Contenu JSON renvoyé par le serveur
      * @returns {Object} intervention (format local)
      */
-    buildInterventionFromAPI(raw) {
+    buildInterventionFromAPI(intervention) {
         // Conversion de technicianRow
-        const techRowsArray = (raw.technicianRow || "1")
+        const techRowsArray = (intervention.technicianRow || "1")
           .split(",")
           .map(x => x.trim())
           .filter(x => x !== "")
@@ -87,12 +94,12 @@ export class DataManager {
         // Construction du tableau de trajets en utilisant la nouvelle structure
         // === Construction du tableau de trajets à partir de dureeTrajet ===
         let trajets = [];
-        if (Array.isArray(raw.trajets)) {
+        if (Array.isArray(intervention.trajets)) {
           // On a besoin des dates de l’intervention pour le calcul
-          const interDebut = new Date(raw.dateDebut);
-          const interFin   = new Date(raw.dateFin);
+          const interDebut = new Date(intervention.dateDebut);
+          const interFin   = new Date(intervention.dateFin);
 
-          trajets = raw.trajets.map(item => {
+          trajets = intervention.trajets.map(item => {
             // si BDD contient déjà dateDebut/dateFin, on les utilise,
             // sinon on reconstitue à partir de la durée (fallback 1 h)
             const duration = item.dureeTrajet || 3600000;
@@ -122,15 +129,16 @@ export class DataManager {
         }
         // === On retourne enfin l'intervention “locale” ===
        return {
-           _id:             raw._id,
-           dateDebut:       new Date(raw.dateDebut),
-           dateFin:         new Date(raw.dateFin),
+           _id:             intervention._id,
+           dateDebut:       new Date(intervention.dateDebut),
+           dateFin:         new Date(intervention.dateFin),
            technicianRows:  techRowsArray,
-           ticketName:      raw.ticketName || "",
-           clientName:      raw.clientName || "",
-           ville:           raw.ville || "",
+           ticketName:      intervention.ticketName || "",
+           clientName:      intervention.clientName || "",
+           ville:           intervention.ville || "",
            trajets:         trajets,
-           technician:      raw.technician || ""
+           technician:      intervention.technician || "",
+           dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
          };
       }
       
@@ -151,7 +159,8 @@ export class DataManager {
         ticketName: intervention.ticketName || "",
         clientName: intervention.clientName || "",
         ville: intervention.ville || "",
-        technician: intervention.technician || ""
+        technician: intervention.technician || "",
+        dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
       };
     
       // On utilise la nouvelle structure pour les trajets
@@ -184,7 +193,7 @@ export class DataManager {
   
       if (intervention._id) {
         // PUT (mise à jour)
-        const url = `/api/interventions/${intervention._id}`;
+        const url = `${API_BASE}/api/interventions/${intervention._id}`;
         try {
           const resp = await fetch(url, {
             method: 'PUT',
@@ -194,10 +203,9 @@ export class DataManager {
           const updated = await resp.json();
   
           if (resp.ok) {
-            console.log("Intervention mise à jour =>", updated);
-            // On met à jour l'intervention locale
-            this.updateLocalIntervention(updated);
-            return updated;
+            const clean = this.buildInterventionFromAPI(updated);
+            this.updateLocalIntervention(clean);
+            return clean;
           } else {
             console.error("Erreur PUT:", updated);
             return undefined;
@@ -208,7 +216,7 @@ export class DataManager {
         }
       } else {
         // POST (création)
-        const url = `/api/interventions`;
+        const url = `${API_BASE}/api/interventions`;
         try {
           const resp = await fetch(url, {
             method: 'POST',
@@ -222,7 +230,7 @@ export class DataManager {
             // On l'ajoute dans this.interventions
             const newInterv = this.buildInterventionFromAPI(created);
             this.interventions.push(newInterv);
-            return created;
+            return newInterv;
           } else {
             console.error("Erreur POST:", created);
             return undefined;
@@ -240,9 +248,9 @@ export class DataManager {
      * 
      * @param {Object} updatedRaw 
      */
-    updateLocalIntervention(updatedRaw) {
+    updateLocalIntervention(updatedIntervention) {
       // Convertir en format local
-      const updatedInterv = this.buildInterventionFromAPI(updatedRaw);
+      const updatedInterv = this.buildInterventionFromAPI(updatedIntervention);
       // Chercher l'index dans this.interventions
       const idx = this.interventions.findIndex(i => i._id === updatedInterv._id);
       if (idx !== -1) {
@@ -253,7 +261,31 @@ export class DataManager {
         this.interventions.push(updatedInterv);
       }
     }
-  
+    
+    async pollNewInterventions(sinceDate) {
+      const isoDate = sinceDate.toISOString();
+      const url = `${API_BASE}/api/interventions?since=${encodeURIComponent(isoDate)}`;
+    
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return [];
+    
+        const rawData = await response.json();
+    
+        const newOnes = rawData.map(obj => this.buildInterventionFromAPI(obj))
+                               .filter(i => i.dateModif > sinceDate);
+    
+        // Met à jour ou ajoute dans interventions locales
+        newOnes.forEach(interv => this.updateLocalIntervention(interv));
+        return newOnes;
+      } catch (err) {
+        console.error("Erreur polling:", err);
+        return [];
+      }
+    }
+    
+
+
     /**
      * Supprime une intervention existante (DELETE).
      * Met à jour this.interventions localement.
@@ -266,7 +298,7 @@ export class DataManager {
         console.warn("Impossible de supprimer, pas d'_id:", intervention);
         return false;
       }
-      const url = `/api/interventions/${intervention._id}`;
+      const url = `${API_BASE}/api/interventions/${intervention._id}`;
   
       try {
         const resp = await fetch(url, {
