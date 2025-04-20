@@ -58,7 +58,7 @@ const interventionSchema = new mongoose.Schema({
     direction:   { type: String, enum: ['left','right'] },
     dureeTrajet: { type: Number } // en millisecondes
   }],
-  dateModif:     { type: Date, required: true },
+  dateModif:     { type: Date, default: Date.now },
 });
 
 // Création des modèles

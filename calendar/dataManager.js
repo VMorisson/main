@@ -141,7 +141,7 @@ export class DataManager {
            ville:           intervention.ville || "",
            trajets:         trajets,
            technician:      intervention.technician || "",
-           dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
+           //dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
          };
       }
       
@@ -163,7 +163,7 @@ export class DataManager {
         clientName: intervention.clientName || "",
         ville: intervention.ville || "",
         technician: intervention.technician || "",
-        dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
+        //dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
       };
     
       // On utilise la nouvelle structure pour les trajets
@@ -286,6 +286,8 @@ export class DataManager {
         }
     
         const rawData = await response.json();
+        console.log("[POLL] Données brutes reçues :", rawData);
+
         const updated = rawData.map(obj => this.buildInterventionFromAPI(obj));
         console.log(`[POLL] ✅ ${updated.length} updates received`);
     

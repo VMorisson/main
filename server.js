@@ -142,7 +142,9 @@ app.get('/api/interventions/:id', async (req, res) => {
 app.post('/api/interventions', async (req, res) => {
   try {
     const data = req.body;
-    data.dateModif = new Date(); // Ajoute la date de modification
+    delete data.dateModif; // nope, on veut pas ton champ vérolé
+    data.dateModif = new Date();
+
     const newIntervention = new Intervention(data);
     const savedIntervention = await newIntervention.save();
     res.status(201).json(savedIntervention);
@@ -155,7 +157,8 @@ app.post('/api/interventions', async (req, res) => {
 app.put('/api/interventions/:id', async (req, res) => {
   try {
     const data = req.body;
-    data.dateModif = new Date(); // Met à jour la date de modification
+    delete data.dateModif; // nope, on veut pas ton champ vérolé
+    data.dateModif = new Date();
 
     const updatedIntervention = await Intervention.findByIdAndUpdate(
       req.params.id,
