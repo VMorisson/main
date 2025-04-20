@@ -623,27 +623,46 @@ export class TimelineRenderer {
     let secondsSince = 0;
   
     const pollingTimerEl = document.getElementById("polling-timer");
+  
+    // Chrono visuel
     setInterval(() => {
       secondsSince++;
       if (pollingTimerEl) {
         pollingTimerEl.textContent = `Dernier polling : ${secondsSince}s`;
       }
+  
+      if (secondsSince > 60) {
+        console.warn("🚨 Aucune mise à jour depuis 60s. Le polling semble inactif.");
+      }
     }, 1000);
   
+    // Polling lui-même
     setInterval(async () => {
+      if (document.visibilityState !== "visible") {
+        console.log("[POLL] Onglet inactif — polling suspendu temporairement");
+        return;
+      }
+    
       const scrollContainer = document.querySelector(".timeline-scroll");
       const currentScrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
-  
+    
+      console.log(`[POLL] Envoi de requête à ${new Date().toLocaleTimeString()}`);
       const updated = await window.dataManager.pollNewInterventions(lastUpdate);
+    
       if (updated.length > 0) {
-        updated.forEach(i => window.timeline.updateSingleIntervention(i));
+        updated.forEach(inter => window.timeline.updateSingleIntervention(inter));
         if (scrollContainer) scrollContainer.scrollLeft = currentScrollLeft;
-  
+    
         lastUpdate = new Date();
-        secondsSince = 0; // 🧼 reset du compteur
+        secondsSince = 0;
+    
+        console.log(`[POLL] 🔁 Planning mis à jour à ${lastUpdate.toISOString()}`);
+      } else {
+        console.log("[POLL] 💤 Aucun changement détecté.");
       }
     }, 5000);
   }
+  
   
 }
 

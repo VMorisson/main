@@ -266,32 +266,36 @@ export class DataManager {
     }
     
     async pollNewInterventions(sinceDate) {
-      const isoDate = sinceDate.toISOString();
-      const url = `${API_BASE}/api/interventions?since=${encodeURIComponent(isoDate)}`;
-      //const url = `${API_BASE}/api/interventions-updates?since=${lastUpdate.toISOString()}&ts=${Date.now()}`;
+      const sinceIso = sinceDate.toISOString();
+      const url = `${API_BASE}/api/interventions?since=${sinceIso}&ts=${Date.now()}`; // ts pour éviter le cache
+    
+      console.log(`[POLL] Checking for updates since ${sinceIso}`);
+    
       try {
         const response = await fetch(url, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
           }
         });
-        if (!response.ok) return [];
+    
+        if (!response.ok) {
+          console.warn(`[POLL] ❌ Failed with status ${response.status}`);
+          return [];
+        }
     
         const rawData = await response.json();
+        const updated = rawData.map(obj => this.buildInterventionFromAPI(obj));
+        console.log(`[POLL] ✅ ${updated.length} updates received`);
     
-        const newOnes = rawData.map(obj => this.buildInterventionFromAPI(obj))
-                               .filter(i => i.dateModif > sinceDate);
-    
-        // Met à jour ou ajoute dans interventions locales
-        newOnes.forEach(interv => this.updateLocalIntervention(interv));
-        return newOnes;
+        return updated;
       } catch (err) {
-        console.error("Erreur polling:", err);
+        console.error("[POLL] ❌ Error during fetch:", err);
         return [];
       }
     }
+    
     
 
 
