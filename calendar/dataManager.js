@@ -267,8 +267,8 @@ export class DataManager {
     
     async pollNewInterventions(sinceDate) {
       const isoDate = sinceDate.toISOString();
-      //const url = `${API_BASE}/api/interventions?since=${encodeURIComponent(isoDate)}`;
-      const url = `${API_BASE}/api/interventions-updates?since=${lastUpdate.toISOString()}&ts=${Date.now()}`;
+      const url = `${API_BASE}/api/interventions?since=${encodeURIComponent(isoDate)}`;
+      //const url = `${API_BASE}/api/interventions-updates?since=${lastUpdate.toISOString()}&ts=${Date.now()}`;
       try {
         const response = await fetch(url, {
           method: 'GET',

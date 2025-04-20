@@ -114,11 +114,16 @@ app.get('/api/interventions', async (req, res) => {
     }
 
     const interventions = await Intervention.find(filter);
+
+    // 🔥 Empêcher le cache HTTP
+    res.set("Cache-Control", "no-store");
+
     res.json(interventions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Route GET : Récupérer une intervention par son ID
 app.get('/api/interventions/:id', async (req, res) => {
