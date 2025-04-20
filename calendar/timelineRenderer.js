@@ -620,25 +620,31 @@ export class TimelineRenderer {
 
   startPollingUpdates() {
     let lastUpdate = new Date();
+    let secondsSince = 0;
+  
+    const pollingTimerEl = document.getElementById("polling-timer");
+    setInterval(() => {
+      secondsSince++;
+      if (pollingTimerEl) {
+        pollingTimerEl.textContent = `Dernier polling : ${secondsSince}s`;
+      }
+    }, 1000);
   
     setInterval(async () => {
-      //const now = new Date();
       const scrollContainer = document.querySelector(".timeline-scroll");
       const currentScrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
   
       const updated = await window.dataManager.pollNewInterventions(lastUpdate);
       if (updated.length > 0) {
         updated.forEach(i => window.timeline.updateSingleIntervention(i));
+        if (scrollContainer) scrollContainer.scrollLeft = currentScrollLeft;
   
-        // Restaurer la position du scroll
-        if (scrollContainer) {
-          scrollContainer.scrollLeft = currentScrollLeft;
-        }
-        const now = new Date();
-        lastUpdate = now;
+        lastUpdate = new Date();
+        secondsSince = 0; // 🧼 reset du compteur
       }
     }, 5000);
-  }  
+  }
+  
 }
 
 
