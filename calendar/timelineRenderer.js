@@ -637,7 +637,7 @@ export class TimelineRenderer {
         const now = new Date();
         lastUpdate = now;
       }
-    }, 10000);
+    }, 5000);
   }  
 }
 
