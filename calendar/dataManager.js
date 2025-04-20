@@ -270,7 +270,13 @@ export class DataManager {
       const url = `${API_BASE}/api/interventions?since=${encodeURIComponent(isoDate)}`;
     
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         if (!response.ok) return [];
     
         const rawData = await response.json();
