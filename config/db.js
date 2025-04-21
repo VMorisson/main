@@ -47,13 +47,25 @@ const espaceSchema = new mongoose.Schema({
 });
 
 const interventionSchema = new mongoose.Schema({
-  technician:    { type: String, required: true },
+  technician:    { type: String, required: false },
   dateDebut:     { type: Date,   required: true },
   dateFin:       { type: Date,   required: true },
   ticketName:    { type: String },
   clientName:    { type: String },
   ville:         { type: String },
-  technicianRow: { type: String, required: true },
+  technicianNames: {
+        type: [String],
+        required: true,
+        enum: ['Romain','Lucas','Rodrigue','LAUREA','Presta']},
+  nomPresta:  { type: String , required: false },
+  technicianRows: {
+    type: [Number],
+    required: true,
+    validate: {
+      validator: arr => arr.length > 0,
+      message: "technicianRows ne peut pas être vide"
+    }
+  },
   trajets: [{
     direction:   { type: String, enum: ['left','right'] },
     dureeTrajet: { type: Number } // en millisecondes

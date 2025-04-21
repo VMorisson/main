@@ -1,7 +1,7 @@
 // timelineRenderer.js
 
 // 1) On importe isWeekend (si nécessaire) depuis dateHelpers.js
-import { isWeekend, dayStart, dayEnd, pixelsPerHourDay, nightWidth, weekendWidth } from './dateHelpers.js';
+import { computeOffsetFromDateTime, computeDateTimeFromOffset,isWeekend, dayStart, dayEnd, pixelsPerHourDay, nightWidth, weekendWidth } from './dateHelpers.js';
 import interact from "https://cdn.interactjs.io/v1.9.20/interactjs/index.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
@@ -254,11 +254,11 @@ export class TimelineRenderer {
   
     interact(block).draggable({
       listeners: {
-        start: (event) => {
+        start(event) {
           block.dataset.initialLeft = parseFloat(block.style.left) || 0;
           block.dataset.totalDx = 0;
         },
-        move: (event) => {
+        move(event) {
           const totalDx = parseFloat(block.dataset.totalDx) + event.dx;
           block.dataset.totalDx = totalDx;
           const initialLeft = parseFloat(block.dataset.initialLeft) || 0;
@@ -271,17 +271,15 @@ export class TimelineRenderer {
   
           if (self.checkForOverlap(newStart, newEnd, intervention)) {
             block.style.outline = "2px solid red";
-            return; // ← on bloque le move si collision détectée
+            return;
           } else {
             block.style.outline = "none";
           }
   
-          document
-            .querySelectorAll(`.intervention[data-id="${intervention._id}"]`)
-            .forEach(b => {
-              b.style.left = `${newLeft}px`;
-              b.style.width = `${width}px`;
-            });
+          document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`).forEach(b => {
+            b.style.left = `${newLeft}px`;
+            b.style.width = `${width}px`;
+          });
   
           intervention.dateDebut = newStart;
           intervention.dateFin = newEnd;
@@ -289,12 +287,18 @@ export class TimelineRenderer {
           self.updateTrajets(intervention);
           self.updateTrajetsDOM(intervention);
         },
-        end: () => {
+        end: async () => {
           if (!intervention.dateDebut || !intervention.dateFin) return;
           block.style.outline = "none";
-          window.dataManager
-            .saveIntervention(intervention)
-            .then(() => window.timeline.updateSingleIntervention(intervention));
+          try {
+            const saved = await window.dataManager.saveIntervention(intervention);
+            if (saved) {
+              window.dataManager.updateLocalIntervention(saved);
+              window.timeline.updateSingleIntervention(saved);
+            }
+          } catch (err) {
+            console.error("❌ Erreur durant le drag-resize :", err);
+          }
         }
       }
     });
@@ -341,12 +345,10 @@ export class TimelineRenderer {
             block.style.outline = "none";
           }
   
-          document
-            .querySelectorAll(`.intervention[data-id="${intervention._id}"]`)
-            .forEach(b => {
-              b.style.left = `${displayLeft}px`;
-              b.style.width = `${displayWidth}px`;
-            });
+          document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`).forEach(b => {
+            b.style.left = `${displayLeft}px`;
+            b.style.width = `${displayWidth}px`;
+          });
   
           intervention.dateDebut = newStart;
           intervention.dateFin = newEnd;
@@ -354,90 +356,105 @@ export class TimelineRenderer {
           self.updateTrajets(intervention);
           self.updateTrajetsDOM(intervention);
         },
-        end() {
+        end: async () => {
           if (!intervention.dateDebut || !intervention.dateFin) return;
-          block.style.outline = "none";
-          window.dataManager
-            .saveIntervention(intervention)
-            .then(() => window.timeline.updateSingleIntervention(intervention));
+          try {
+            const saved = await window.dataManager.saveIntervention(intervention);
+            if (saved) {
+              window.dataManager.updateLocalIntervention(saved);
+              window.timeline.updateSingleIntervention(saved);
+            }
+          } catch (err) {
+            console.error("❌ Erreur durant le redimensionnement :", err);
+          }
         }
       }
     });
-  }  
+  } 
   setupDragResizeTrajet(trajetBlock, intervention, trajet) {
     const gridStep = 15;
-
+  
     interact(trajetBlock).resizable({
       edges: trajet.direction === 'left' ? { left: true } : { right: true },
       listeners: {
         start(event) {
-          trajetBlock._initialLeft  = parseFloat(trajetBlock.style.left)  || 0;
+          trajetBlock._initialLeft = parseFloat(trajetBlock.style.left) || 0;
           trajetBlock._initialWidth = parseFloat(trajetBlock.style.width) || 0;
-          trajetBlock._deltaLeft    = 0;
-          trajetBlock._deltaWidth   = 0;
+          trajetBlock._deltaLeft = 0;
+          trajetBlock._deltaWidth = 0;
         },
         move(event) {
-          trajetBlock._deltaLeft  += event.deltaRect.left  || 0;
+          trajetBlock._deltaLeft += event.deltaRect.left || 0;
           trajetBlock._deltaWidth += event.deltaRect.width || 0;
-
-          let displayLeft  = trajetBlock._initialLeft;
+  
+          let displayLeft = trajetBlock._initialLeft;
           let displayWidth = trajetBlock._initialWidth;
-
+  
           if (trajet.direction === 'left') {
-            displayLeft  = Math.round((trajetBlock._initialLeft + trajetBlock._deltaLeft) / gridStep) * gridStep;
+            displayLeft = Math.round((trajetBlock._initialLeft + trajetBlock._deltaLeft) / gridStep) * gridStep;
             displayWidth = Math.round((trajetBlock._initialWidth - trajetBlock._deltaLeft) / gridStep) * gridStep;
           } else {
             displayWidth = Math.round((trajetBlock._initialWidth + trajetBlock._deltaWidth) / gridStep) * gridStep;
           }
-
+  
           if (displayLeft < 0) {
             displayWidth += displayLeft;
             displayLeft = 0;
           }
-
-          // Mise à jour DOM
-          document
-            .querySelectorAll(`.trajet-block.trajet-${trajet.direction}[data-id="${intervention._id}"]`)
-            .forEach(b => {
-              b.style.left  = `${displayLeft}px`;
-              b.style.width = `${displayWidth}px`;
-            });
-
-          // Mise à jour modèle : dateDebut, dateFin et dureeTrajet
+  
+          document.querySelectorAll(`.trajet-block.trajet-${trajet.direction}[data-id="${intervention._id}"]`).forEach(b => {
+            b.style.left = `${displayLeft}px`;
+            b.style.width = `${displayWidth}px`;
+          });
+  
           const newStart = computeDateTimeFromOffset(displayLeft);
-          const newEnd   = computeDateTimeFromOffset(displayLeft + displayWidth);
+          const newEnd = computeDateTimeFromOffset(displayLeft + displayWidth);
+  
           if (!isNaN(newStart) && !isNaN(newEnd)) {
-            trajet.dateDebut   = newStart;
-            trajet.dateFin     = newEnd;
+            trajet.dateDebut = newStart;
+            trajet.dateFin = newEnd;
             trajet.dureeTrajet = Math.round(displayWidth * 120000);
           }
-
-          window.dataManager.saveIntervention(intervention);
+        },
+        end: async () => {
+          try {
+            const saved = await window.dataManager.saveIntervention(intervention);
+            if (saved) {
+              window.dataManager.updateLocalIntervention(saved);
+              window.timeline.updateSingleIntervention(saved);
+            }
+          } catch (err) {
+            console.error("❌ Erreur durant le redimensionnement du trajet :", err);
+          }
         }
       }
     });
   }
+
   checkForOverlap(newStart, newEnd, currentIntervention) {
     return window.dataManager.interventions.some(other => {
+      // Ignorer soi‑même
       if (other._id === currentIntervention._id) return false;
-  
-      const sameRow = other.technicianRows.some(row =>
-        currentIntervention.technicianRows.includes(row)
-      );
+
+      // Si l’un des deux n’a pas de technicianRows, pas de chevauchement pertinent
+      if (!Array.isArray(other.technicianRows) || !Array.isArray(currentIntervention.technicianRows)) {
+        return false;
+      }
+
+      // Test d’intersection des lignes
+      const sameRow = other.technicianRows
+        .some(row => currentIntervention.technicianRows.includes(row));
       if (!sameRow) return false;
-  
-      const startInside =
-        newStart >= other.dateDebut && newStart < other.dateFin;
-  
-      const endInside =
-        newEnd > other.dateDebut && newEnd <= other.dateFin;
-  
-      const engulfing =
-        newStart < other.dateDebut && newEnd > other.dateFin;
-  
+
+      // Cas de chevauchement temporel
+      const startInside = newStart >= other.dateDebut && newStart < other.dateFin;
+      const endInside   = newEnd   >  other.dateDebut && newEnd   <= other.dateFin;
+      const engulfing   = newStart <  other.dateDebut && newEnd   >  other.dateFin;
+
       return startInside || endInside || engulfing;
     });
   }
+
   
   
   
@@ -500,12 +517,20 @@ export class TimelineRenderer {
   
     interventions.forEach(inter => {
       //this.updateTrajets(inter);
+      const rows = Array.isArray(inter.technicianRows)
+      ? inter.technicianRows
+      : [];
+    if (rows.length === 0) {
+      console.warn(`[TimelineRenderer] ⚠️ skip ${inter._id} car technicianRows invalide:`, inter.technicianRows);
+      return;
+    }
       const offsetStart = computeOffsetFromDateTime(new Date(inter.dateDebut));
       const offsetEnd = computeOffsetFromDateTime(new Date(inter.dateFin));
       const width = offsetEnd - offsetStart;
-  
-      inter.technicianRows.forEach(rowId => {
-        const rowEl = document.querySelector(`#calendar .technician-row:nth-child(${rowId}) .timeline-content`);
+      
+      rows.forEach(rowId => {
+        const rowSelector = `#calendar .technician-row:nth-child(${rowId}) .timeline-content`;
+        const rowEl = document.querySelector(rowSelector);
         if (!rowEl) return;
   
         const interDiv = document.createElement("div");
@@ -550,14 +575,22 @@ export class TimelineRenderer {
     });
   }
   renderIntervention(inter) {
+    const rows = Array.isArray(inter.technicianRows) ? inter.technicianRows : [];
+    if (rows.length === 0) {
+      console.warn(`[TimelineRenderer] ⚠️ skip renderIntervention pour ${inter._id}, technicianRows invalide`);
+      return;
+    }
     const offsetStart = computeOffsetFromDateTime(new Date(inter.dateDebut));
     const offsetEnd = computeOffsetFromDateTime(new Date(inter.dateFin));
     const width = offsetEnd - offsetStart;
   
-    inter.technicianRows.forEach(rowId => {
-      const rowEl = document.querySelector(`#calendar .technician-row:nth-child(${rowId}) .timeline-content`);
-      if (!rowEl) return;
-  
+    rows.forEach(rowId => {
+      const rowSelector = `#calendar .technician-row:nth-child(${rowId}) .timeline-content`;
+      const rowEl = document.querySelector(rowSelector);
+      if (!rowEl) {
+        console.warn(`[TimelineRenderer] pas de .technician-row pour index ${rowId}`);
+        return;
+      }
       const interDiv = document.createElement("div");
       interDiv.className = "intervention";
       interDiv.dataset.id = inter._id;
@@ -675,7 +708,13 @@ export class TimelineRenderer {
 **************************************************************************/
 let lastContextOffsetX = 0;   // on stockera la coordonnée X en pixel
 let lastTimelineContent = null; // on stockera l'élément .timeline-content
-
+const TECHS = [
+  { id:1, name:"Romain"   },
+  { id:2, name:"Lucas"    },
+  { id:3, name:"Rodrigue" },
+  { id:4, name:"LAUREA"   },
+  { id:5, name:"Presta"   }
+];
 document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
 
@@ -808,78 +847,89 @@ if (menuDelete) {
     });
 }
 if (menuToggleAller) {
-menuToggleAller.addEventListener("click", async () => {
-  const menu = document.getElementById("context-menu");
-  menu.style.display = "none";
+  menuToggleAller.addEventListener("click", async () => {
+    const menu = document.getElementById("context-menu");
+    menu.style.display = "none";
 
-  const id    = menu.dataset.interventionId;
-  const interv = window.dataManager.interventions.find(i => i._id === id);
-  if (!interv) return;
+    const id = menu.dataset.interventionId;
+    const found = window.dataManager.interventions.find(i => i._id === id);
+    if (!found) return;
 
-  const hasLeft = interv.trajets.some(t => t.direction === "left");
-  if (hasLeft) {
-    // on retire
-    interv.trajets = interv.trajets.filter(t => t.direction !== "left");
-  } else {
-    // on ajoute 1h avant dateDebut
+    // On crée un nouvel objet en reprenant tout
+    const interv = {
+      ...found,
+      trajets: Array.isArray(found.trajets) ? [...found.trajets] : []
+    };
+
+    const hasLeft = interv.trajets.some(t => t.direction === "left");
     const durMs = 3600_000;
-    interv.trajets.push({
-      direction:   "left",
-      dateDebut:   new Date(new Date(interv.dateDebut).getTime() - durMs),
-      dateFin:     new Date(interv.dateDebut),
-      type:        "voiture",
-      dureeTrajet: durMs
-    });
-  }
 
-  const saved = await window.dataManager.saveIntervention(inter);
-  if (!saved) return;
+    if (hasLeft) {
+      interv.trajets = interv.trajets.filter(t => t.direction !== "left");
+    } else {
+      interv.trajets.push({
+        direction:   "left",
+        dateDebut:   new Date(new Date(interv.dateDebut).getTime() - durMs),
+        dateFin:     new Date(interv.dateDebut),
+        type:        "voiture",
+        dureeTrajet: durMs
+      });
+    }
 
-  const isNew = !intervId;
-
-  if (isNew) {
-    window.timeline.renderIntervention(saved); // création
-  } else {
-    window.timeline.updateSingleIntervention(saved); // mise à jour
-  }
-});
+    try {
+      const saved = await window.dataManager.saveIntervention(interv);
+      if (saved) {
+        window.dataManager.updateLocalIntervention(saved);
+        window.timeline.updateSingleIntervention(saved);
+      }
+    } catch (err) {
+      console.error("❌ Erreur lors du toggle trajet :", err);
+    }
+    
+  });
 }
 if (menuToggleRetour) {
-menuToggleRetour.addEventListener("click", async () => {
-  const menu = document.getElementById("context-menu");
-  menu.style.display = "none";
+  menuToggleRetour.addEventListener("click", async () => {
+    const menu = document.getElementById("context-menu");
+    menu.style.display = "none";
 
-  const id     = menu.dataset.interventionId;
-  const interv = window.dataManager.interventions.find(i => i._id === id);
-  if (!interv) return;
+    const id = menu.dataset.interventionId;
+    const found = window.dataManager.interventions.find(i => i._id === id);
+    if (!found) return;
 
-  const hasRight = interv.trajets.some(t => t.direction === "right");
-  if (hasRight) {
-    // on retire
-    interv.trajets = interv.trajets.filter(t => t.direction !== "right");
-  } else {
-    // on ajoute 1h après dateFin
+    const interv = {
+      ...found,
+      trajets: Array.isArray(found.trajets) ? [...found.trajets] : []
+    };
+
+    const hasRight = interv.trajets.some(t => t.direction === "right");
     const durMs = 3600_000;
-    interv.trajets.push({
-      direction:   "right",
-      dateDebut:   new Date(interv.dateFin),
-      dateFin:     new Date(new Date(interv.dateFin).getTime() + durMs),
-      type:        "voiture",
-      dureeTrajet: durMs
-    });
-  }
-  const saved = await window.dataManager.saveIntervention(inter);
-  if (!saved) return;
 
-  const isNew = !intervId;
+    if (hasRight) {
+      interv.trajets = interv.trajets.filter(t => t.direction !== "right");
+    } else {
+      interv.trajets.push({
+        direction:   "right",
+        dateDebut:   new Date(interv.dateFin),
+        dateFin:     new Date(new Date(interv.dateFin).getTime() + durMs),
+        type:        "voiture",
+        dureeTrajet: durMs
+      });
+    }
 
-  if (isNew) {
-    window.timeline.renderIntervention(saved); // création
-  } else {
-    window.timeline.updateSingleIntervention(saved); // mise à jour
-  }
-});
+    try {
+      const saved = await window.dataManager.saveIntervention(interv);
+      if (saved) {
+        window.dataManager.updateLocalIntervention(saved);
+        window.timeline.updateSingleIntervention(saved);
+      }
+    } catch (err) {
+      console.error("❌ Erreur lors du toggle trajet :", err);
+    }
+    
+  });
 }
+
 
   
 
@@ -890,56 +940,89 @@ menuToggleRetour.addEventListener("click", async () => {
 **************************************************************************/
 function showInterventionForm(intervention) {
   const modal = document.getElementById("form-modal");
-  if (!modal) return;
+  if (!modal) {
+    console.error("showInterventionForm : modal introuvable");
+    return;
+  }
 
-  // Récup les champs
-  const titleEl        = document.getElementById("form-title");
-  const ticketEl       = document.getElementById("form-ticketName");
-  const clientEl       = document.getElementById("form-clientName");
-  const villeEl        = document.getElementById("form-ville");
-  const leftChk        = document.getElementById("form-leftTrajet");
-  const rightChk       = document.getElementById("form-rightTrajet");
-  const techChecks     = document.querySelectorAll("input[name='tech']");
+  // Champs de texte
+  const titleEl  = document.getElementById("form-title");
+  const ticketEl = document.getElementById("form-ticketName");
+  const clientEl = document.getElementById("form-clientName");
+  const villeEl  = document.getElementById("form-ville");
+  const leftChk  = document.getElementById("form-leftTrajet");
+  const rightChk = document.getElementById("form-rightTrajet");
+  
+  // Conteneur des checkbox tech
+  const techContainer = document.getElementById("tech-container");
+  if (!techContainer) {
+    console.error("showInterventionForm : #tech-container manquant dans le DOM");
+    return;
+  }
 
-  // Reset
-  ticketEl.value  = "";
-  clientEl.value  = "";
-  villeEl.value   = "";
+  // Réinitialisation des champs
+  ticketEl.value   = "";
+  clientEl.value   = "";
+  villeEl.value    = "";
   leftChk.checked  = false;
   rightChk.checked = false;
-  techChecks.forEach(chk => chk.checked = false);
+  techContainer.innerHTML = "";  // Vider les anciennes checkbox
 
-  // IntervID stocké dans modal.dataset
   if (!intervention) {
     titleEl.textContent = "Nouvelle intervention";
     modal.dataset.interventionId = "";
+    console.log("Création d'une NOUVELLE intervention");
   } else {
-    titleEl.textContent = "Afficher / Modifier intervention";
+    titleEl.textContent = "Modifier intervention";
     modal.dataset.interventionId = intervention._id || "";
+    console.log("Édition de l'intervention", intervention._id);
 
-    // Remplir
-    ticketEl.value = intervention.ticketName || "";
-    clientEl.value = intervention.clientName || "";
-    villeEl.value  = intervention.ville      || "";
+    // Remplissage des textes
+    ticketEl.value = intervention.ticketName  || "";
+    clientEl.value = intervention.clientName  || "";
+    villeEl.value  = intervention.ville       || "";
 
     // Trajets
-    const hasLeft  = !!intervention.trajets.find(t => t.direction === "left");
-    const hasRight = !!intervention.trajets.find(t => t.direction === "right");
-    leftChk.checked  = hasLeft;
-    rightChk.checked = hasRight;
-
-    // Technicians
-    if (Array.isArray(intervention.technicianRows)) {
-      intervention.technicianRows.forEach(num => {
-        const chk = [...techChecks].find(c => parseInt(c.value,10)===num);
-        if (chk) chk.checked = true;
-      });
-    }
+    leftChk.checked  = Array.isArray(intervention.trajets) && intervention.trajets.some(t => t.direction === "left");
+    rightChk.checked = Array.isArray(intervention.trajets) && intervention.trajets.some(t => t.direction === "right");
   }
+
+  // --- Construction des checkbox techniciens ---
+  // On part toujours de intervention.technicianRows (tableau de 1 à 5)
+  const selectedRows = Array.isArray(intervention?.technicianRows)
+    ? intervention.technicianRows
+    : [];
+
+  console.log("TechnicianRows à pré-cocher :", selectedRows);
+
+  TECHS.forEach(({id,name}) => {
+    // Création de la case à cocher
+    const chk = document.createElement("input");
+    chk.type  = "checkbox";
+    chk.name  = "tech";
+    chk.value = id;               // on lit ensuite parseInt(chk.value)
+    chk.id    = `tech-${id}`;
+    if (selectedRows.includes(id)) {
+      chk.checked = true;
+      console.log(`→ pré-coché: ${name} (id=${id})`);
+    }
+
+    // Label associé
+    const lbl = document.createElement("label");
+    lbl.htmlFor = chk.id;
+    lbl.textContent = name;
+
+    // On ajoute au conteneur
+    techContainer.appendChild(chk);
+    techContainer.appendChild(lbl);
+  });
 
   // Affiche la modale
   modal.style.display = "flex";
 }
+
+
+
 
 /**************************************************************************
   Boutons "Enregistrer" / "Annuler" dans la modale
@@ -959,97 +1042,95 @@ if (saveBtn) {
   saveBtn.addEventListener("click", async () => {
     const modal = document.getElementById("form-modal");
     if (!modal) return;
-
-    const intervId = modal.dataset.interventionId;
-
-    // Champs
-    const ticketEl       = document.getElementById("form-ticketName");
-    const clientEl       = document.getElementById("form-clientName");
-    const villeEl        = document.getElementById("form-ville");
-    const leftChk        = document.getElementById("form-leftTrajet");
-    const rightChk       = document.getElementById("form-rightTrajet");
-    const techChecks     = document.querySelectorAll("input[name='tech']:checked");
-
-    // Trouve intervention existante si l'ID n'est pas vide
-    let existing = null;
-    if (intervId) {
-      existing = window.dataManager.interventions.find(i => i._id === intervId);
-    }
-
-    // Si c'est une nouvelle intervention => on calcule dateDebut / dateFin
+  
+    const intervId  = modal.dataset.interventionId;
+    const ticketEl  = document.getElementById("form-ticketName");
+    const clientEl  = document.getElementById("form-clientName");
+    const villeEl   = document.getElementById("form-ville");
+    const leftChk   = document.getElementById("form-leftTrajet");
+    const rightChk  = document.getElementById("form-rightTrajet");
+  
     let dateDebut, dateFin;
-    if (!existing) {
-      const { computeDateTimeFromOffset, pixelsPerHourDay } = await import("./dateHelpers.js");
+    if (intervId) {
+      const existing = window.dataManager.interventions.find(i => i._id === intervId);
+      if (!existing) return alert("Intervention introuvable");
+      dateDebut = existing.dateDebut;
+      dateFin = existing.dateFin;
+    } else {
       dateDebut = computeDateTimeFromOffset(lastContextOffsetX);
       dateFin   = computeDateTimeFromOffset(lastContextOffsetX + pixelsPerHourDay);
-    } else {
-      dateDebut = existing.dateDebut;
-      dateFin   = existing.dateFin;
     }
-
-    // Techniciens
-    const techArray = [...techChecks].map(chk => parseInt(chk.value, 10));
-
-    // Trajets
-    let trajets = [];
-    if (leftChk.checked) {
-      const startLeft = addHoursToDate(dateDebut, -1);
-      const endLeft   = new Date(dateDebut);
-      const durationLeft = endLeft.getTime() - startLeft.getTime();
+  
+    // 🔧 Construction des techniciens
+    const techChecks = document.querySelectorAll("#tech-container input[name='tech']:checked");
+    const technicianRows = [];
+    const technicianNames = [];
+  
+    techChecks.forEach(chk => {
+      const row = parseInt(chk.value, 10);
+      const tech = TECHS.find(t => t.id === row);
+      if (tech) {
+        technicianRows.push(row);
+        technicianNames.push(tech.name);
+      }
+    });
+  
+    if (technicianRows.length === 0) {
+      alert("Veuillez sélectionner au moins un technicien.");
+      return;
+    }
+  
+    // 🔧 Construction des trajets
+    const trajets = [];
+    if (leftChk?.checked) {
+      const start = addHoursToDate(dateDebut, -1);
+      const end = new Date(dateDebut);
       trajets.push({
         direction: "left",
-        dateDebut: startLeft,
-        dateFin: endLeft,
+        dateDebut: start,
+        dateFin: end,
         type: "voiture",
-        dureeTrajet: durationLeft
+        dureeTrajet: end.getTime() - start.getTime()
       });
     }
-
-    if (rightChk.checked) {
-      const startRight = new Date(dateFin);
-      const endRight   = addHoursToDate(dateFin, 1);
-      const durationRight = endRight.getTime() - startRight.getTime();
+    if (rightChk?.checked) {
+      const start = new Date(dateFin);
+      const end = addHoursToDate(dateFin, 1);
       trajets.push({
         direction: "right",
-        dateDebut: startRight,
-        dateFin: endRight,
+        dateDebut: start,
+        dateFin: end,
         type: "voiture",
-        dureeTrajet: durationRight
+        dureeTrajet: end.getTime() - start.getTime()
       });
     }
-
+  
     const newInter = {
       _id: intervId || undefined,
       dateDebut,
       dateFin,
-      ticketName: ticketEl.value || "",
-      clientName: clientEl.value || "",
-      ville: villeEl.value || "",
-      technicianRows: techArray,
-      technicianRow: techArray.join(","), // ← le string que la BDD attend
-      technician: techArray.length > 1
-        ? `Techniciens ${techArray.join(",")}`
-        : `Technicien ${techArray[0] || 1}`,
+      ticketName: ticketEl.value.trim(),
+      clientName: clientEl.value.trim(),
+      ville: villeEl.value.trim(),
+      technicianRows,
+      technicianNames,
       trajets
     };
-
-    const saved = await window.dataManager.saveIntervention(newInter);
-    if (!saved) {
-      console.warn("❌ Intervention non sauvegardée !");
-      return;
+  
+    try {
+      const saved = await window.dataManager.saveIntervention(newInter);
+      if (saved) {
+        window.dataManager.updateLocalIntervention(saved);
+        window.timeline.updateSingleIntervention(saved);
+        modal.style.display = "none";
+      }
+    } catch (err) {
+      console.error("💥 Erreur lors de la sauvegarde :", err);
+      alert("Erreur lors de l'enregistrement : " + err.message);
     }
-
-    if (!intervId) {
-      // C’est une nouvelle intervention
-      window.timeline.renderIntervention(saved);
-    } else {
-      window.timeline.updateSingleIntervention(saved);
-    }
-    // 💅 Fermeture de la modale
-    modal.style.display = "none";
   });
+  
 }
-
 if (cancelBtn) {
   cancelBtn.addEventListener("click", () => {
     const modal = document.getElementById("form-modal");

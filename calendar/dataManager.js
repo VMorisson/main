@@ -24,30 +24,10 @@ const API_BASE = IS_PROD
   ? window.location.origin
   : "http://localhost:3000";
 
-
-
 export class DataManager {
-    constructor() {
-      /**
-       * Tableau local d'interventions.
-       * Format interne (pour chaque intervention):
-       * {
-       *   _id: string | undefined,
-       *   dateDebut: Date,
-       *   dateFin: Date,
-       *   technicianRows: number[], // ex. [1, 2]
-       *   ticketName: string,
-       *   clientName: string,
-       *   ville: string,
-       *   trajets: [
-       *     { direction: 'left'|'right', dateDebut: Date, dateFin: Date, type: string },
-       *     ...
-       *   ],
-       *   technician: string // champ requis par ton schéma
-       * }
-       */
-      this.interventions = [];
-    }
+  constructor() {
+    this.interventions = [];
+  }
     
      
     /**
@@ -86,14 +66,7 @@ export class DataManager {
      * @param {Object} raw - Contenu JSON renvoyé par le serveur
      * @returns {Object} intervention (format local)
      */
-    buildInterventionFromAPI(intervention) {
-        // Conversion de technicianRow
-        const techRowsArray = (intervention.technicianRow || "1")
-          .split(",")
-          .map(x => x.trim())
-          .filter(x => x !== "")
-          .map(x => parseInt(x, 10));
-      
+    buildInterventionFromAPI(intervention) {          
         // Construction du tableau de trajets en utilisant la nouvelle structure
         // === Construction du tableau de trajets à partir de dureeTrajet ===
         let trajets = [];
@@ -130,17 +103,19 @@ export class DataManager {
         } else {
           // conservez ici votre fallback existant si besoin
         }
-        // === On retourne enfin l'intervention “locale” ===
-       return {
+
+      const techRowsArray = Array.isArray(intervention.technicianRows)
+          ? intervention.technicianRows.map(x => parseInt(x,10)) : [];
+       return{
            _id:             intervention._id,
            dateDebut:       new Date(intervention.dateDebut),
            dateFin:         new Date(intervention.dateFin),
-           technicianRows:  techRowsArray,
+           technicianNames: Array.isArray(intervention.technicianNames) ? [...intervention.technicianNames] : [],
+           technicianRows:   techRowsArray,
            ticketName:      intervention.ticketName || "",
            clientName:      intervention.clientName || "",
            ville:           intervention.ville || "",
            trajets:         trajets,
-           technician:      intervention.technician || "",
            //dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
          };
       }
@@ -154,17 +129,17 @@ export class DataManager {
      * @returns {Object} Le body JSON à envoyer via fetch()
      */
     buildAPIBodyFromIntervention(intervention) {
-      const techRowStr = intervention.technicianRows.join(",");
       const body = {
-        dateDebut: intervention.dateDebut?.toISOString?.() || null,
-        dateFin: intervention.dateFin?.toISOString?.() || null,
-        technicianRow: techRowStr,
-        ticketName: intervention.ticketName || "",
-        clientName: intervention.clientName || "",
-        ville: intervention.ville || "",
-        technician: intervention.technician || "",
-        //dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
-      };
+            technicianRows: intervention.technicianRows,  // array de nombres
+            dateDebut:      intervention.dateDebut?.toISOString(),
+            dateFin:        intervention.dateFin  ?.toISOString(),
+            ticketName:     intervention.ticketName,
+            clientName:     intervention.clientName,
+            ville:          intervention.ville,
+          };
+          if (Array.isArray(intervention.technicianNames)) {
+            body.technicianNames = [...intervention.technicianNames];
+          }
     
       // On utilise la nouvelle structure pour les trajets
       if (Array.isArray(intervention.trajets)) {
@@ -192,8 +167,11 @@ export class DataManager {
      * @returns {Promise<Object|undefined>} L'objet renvoyé par l'API, ou undefined si erreur
      */
     async saveIntervention(intervention) {
+      console.log("💾 [saveIntervention] Appel avec:", intervention);
+    
       const bodyToSend = this.buildAPIBodyFromIntervention(intervention);
-  
+      console.log("📤 [saveIntervention] Payload à envoyer:", bodyToSend);
+    
       if (intervention._id) {
         // PUT (mise à jour)
         const url = `${API_BASE}/api/interventions/${intervention._id}`;
@@ -203,20 +181,39 @@ export class DataManager {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bodyToSend)
           });
-          const updated = await resp.json();
-  
-          if (resp.ok) {
-            const clean = this.buildInterventionFromAPI(updated);
-            this.updateLocalIntervention(clean);
-            return clean;
-          } else {
-            console.error("Erreur PUT:", updated);
+    
+          const putResult = await resp.json();
+          console.log("✅ [saveIntervention] Réponse PUT:", putResult);
+    
+          if (!resp.ok) {
+            console.error("❌ [saveIntervention] PUT échoué avec:", putResult);
             return undefined;
           }
-        } catch(err) {
-          console.error("Erreur fetch PUT:", err);
+    
+          const getUrl = `${API_BASE}/api/interventions/${intervention._id}`;
+          console.log("🔄 [saveIntervention] Relecture GET vers:", getUrl);
+          const getResp = await fetch(getUrl);
+          const fresh = await getResp.json();
+    
+          console.log("📥 [saveIntervention] Réponse GET après PUT:", fresh);
+    
+          if (!getResp.ok || !fresh) {
+            console.warn("⚠️ [saveIntervention] GET après PUT échoué");
+            return undefined;
+          }
+    
+          const clean = this.buildInterventionFromAPI(fresh);
+          console.log("🧼 [saveIntervention] Intervention nettoyée:", clean);
+          console.log("⚠️ PRE-SAVE technicianRows =", intervention.technicianRows);
+
+          this.updateLocalIntervention(clean);
+          return clean;
+    
+        } catch (err) {
+          console.error("🔥 [saveIntervention] Erreur réseau PUT:", err);
           return undefined;
         }
+    
       } else {
         // POST (création)
         const url = `${API_BASE}/api/interventions`;
@@ -226,24 +223,29 @@ export class DataManager {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bodyToSend)
           });
+    
           const created = await resp.json();
-  
-          if (resp.ok) {
-            console.log("Intervention créée =>", created);
-            // On l'ajoute dans this.interventions
-            const newInterv = this.buildInterventionFromAPI(created);
-            this.interventions.push(newInterv);
-            return newInterv;
-          } else {
-            console.error("Erreur POST:", created);
+          console.log("🆕 [saveIntervention] Réponse POST:", created);
+    
+          if (!resp.ok) {
+            console.error("❌ [saveIntervention] POST échoué:", created);
             return undefined;
           }
-        } catch(err) {
-          console.error("Erreur fetch POST:", err);
+    
+          const newInterv = this.buildInterventionFromAPI(created);
+          console.log("🎁 [saveIntervention] Nouvelle intervention nettoyée:", newInterv);
+    
+          this.interventions.push(newInterv);
+          return newInterv;
+    
+        } catch (err) {
+          console.error("🔥 [saveIntervention] Erreur réseau POST:", err);
           return undefined;
         }
       }
     }
+    
+    
   
     /**
      * Met à jour l'intervention correspondante dans this.interventions 

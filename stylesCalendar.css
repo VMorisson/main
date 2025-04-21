@@ -348,6 +348,12 @@ border-bottom: 2px solid #2d2d2d;
   justify-content: flex-end;
   gap: 8px;
 }
+.technician-checkboxes label {
+  display: inline-block;
+  margin-right: 12px;
+  margin-bottom: 6px;
+}
+
 
 
 

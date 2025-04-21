@@ -8,7 +8,13 @@ const { ObjectId } = require('mongoose').Types; // Importer ObjectId
 
 // Importation de la configuration MongoDB et des modèles
 const { Parc, Client, Site, Espace, Intervention} = require('./config/db.js');
-
+const nameToId = {
+  'Romain':   1,
+  'Lucas':    2,
+  'Rodrigue': 3,
+  'LAUREA':   4,
+  'Presta':   5,
+};
 const cors = require('cors');
 app.use(cors());
 
@@ -20,6 +26,8 @@ app.use(express.static(path.join(__dirname)));
 
 // Servir explicitement le dossier node_modules
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
+
+
 
 // Route pour récupérer les parcs
 app.get('/api/parcs', async (req, res) => {
@@ -100,6 +108,10 @@ app.get('/api/hierarchy', async (req, res) => {
 
 
 
+
+
+
+
 // Route GET : Récupérer toutes les interventions
 app.get('/api/interventions', async (req, res) => {
   try {
@@ -117,7 +129,6 @@ app.get('/api/interventions', async (req, res) => {
 
     // 🔥 Empêcher le cache HTTP
     res.set("Cache-Control", "no-store");
-
     res.json(interventions);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -144,7 +155,15 @@ app.post('/api/interventions', async (req, res) => {
     const data = req.body;
     delete data.dateModif; // nope, on veut pas ton champ vérolé
     data.dateModif = new Date();
-
+    if (Array.isArray(data.technicianNames)) {
+            data.technicianRows = data.technicianNames
+              .map(n => nameToId[n])
+              .filter(n => !!n);
+          }
+          if (!Array.isArray(data.technicianRows) || data.technicianRows.length === 0) {
+            return res.status(400).json({ error: "Aucun technicien valide fourni" });
+          }
+          
     const newIntervention = new Intervention(data);
     const savedIntervention = await newIntervention.save();
     res.status(201).json(savedIntervention);
@@ -157,9 +176,18 @@ app.post('/api/interventions', async (req, res) => {
 app.put('/api/interventions/:id', async (req, res) => {
   try {
     const data = req.body;
+    console.log("[PUT] data =", data);
     delete data.dateModif; // nope, on veut pas ton champ vérolé
     data.dateModif = new Date();
-
+    if (Array.isArray(data.technicianNames)) {
+            data.technicianRows = data.technicianNames
+              .map(n => nameToId[n])
+              .filter(n => !!n);
+          }
+          if (!Array.isArray(data.technicianRows) || data.technicianRows.length === 0) {
+            return res.status(400).json({ error: "Aucun technicien valide fourni" });
+          }
+          
     const updatedIntervention = await Intervention.findByIdAndUpdate(
       req.params.id,
       data,
