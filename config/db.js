@@ -66,6 +66,7 @@ const interventionSchema = new mongoose.Schema({
       message: "technicianRows ne peut pas être vide"
     }
   },
+  typeTrajet: { type: String, enum: ['voiture','train', 'avion'], default: 'voiture' },
   trajets: [{
     direction:   { type: String, enum: ['left','right'] },
     dureeTrajet: { type: Number } // en millisecondes

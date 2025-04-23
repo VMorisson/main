@@ -197,37 +197,60 @@ border-bottom: 2px solid #2d2d2d;
   position: absolute;
   top: 2px;
   bottom: 2px;
-  background-color: #ff9900;
+  background-color: #69ae14;
   color: white;
   text-align: center;
-  padding: 1px;
+  padding: 0px;
   cursor: move;
   box-sizing: border-box;
   border: 1px solid #000;
   z-index: 100;
-  font-size: 10px;
 
   touch-action: none;
 }
 
-/* Sous-blocs dans l’intervention 
-   (INST / client / ville)
-*/
-.intervention .inst-line {
-  font-weight: 900;
+.fit-line {
+  display: block;
+  width: 100%;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
 }
-.intervention .client-line {
+.inst-line {
+  background-color: rgba(128, 128, 128, 0.4); /* gris transparent */
+  /*padding-bottom: 1px;*/
+  border-bottom: 1px solid #000; /* bordure inférieure */
+  text-align: center;
+}
+
+/* client-line : texte en gras */
+.client-line {
+  font-weight: bold;
+  margin-top: 1px;
+}
+
+/* ville-line : texte souligné */
+.ville-line {
+  margin-top: -1px;
   text-decoration: underline;
 }
-.intervention .ville-line {
-  white-space: normal;
-  word-wrap: break-word;
+.rotated-line {
+  transform: rotate(90deg);
+  transform-origin: left top;
+  display: inline-block;
+  white-space: nowrap;
+  text-align: left;
 }
+
+
+
+
+
+
 
 .resize-handle {
   position: absolute;
   top: 0;
-  width: 8px;
+  width: 11px;
   height: 100%;
   z-index: 2;
 }
@@ -247,30 +270,38 @@ border-bottom: 2px solid #2d2d2d;
 .trajet-block {
   position: absolute;
   top: 5px;            /* pour être un peu plus bas que l'intervention */
-  height: 40px;        /* hauteur fixe */
-  line-height: 40px;   /* centre verticalement le contenu */
-  background-color: #444;  
+  height: 50px;        /* hauteur fixe */
+  line-height: 50px;   /* centre verticalement le contenu */
   color: #fff;
   text-align: center;
+  align-items: center;
   cursor: pointer;
   z-index: 99;
   border: 1px solid #000;
   box-sizing: border-box;
 }
 
-/* Trajet direction LEFT */
 .trajet-left {
   /* Couleur ou style différent pour left */
-  background-color: #666;    /* ou ce que tu veux */
-  border-right: 2px solid #000; 
-}
-
-/* Trajet direction RIGHT */
+  border-right: 0px; }
 .trajet-right {
   /* Couleur ou style différent pour right */
-  background-color: #888;
-  border-left: 2px solid #000;
-}
+  border-left: 0px;}
+.trajet-voiture {
+  background-color: #bca4a4;}
+.trajet-voiture::before {
+  content: "🚗 ";}
+.trajet-train {
+  background-color: #ffe7ba;}
+.trajet-train::before {
+  content: "🚆 ";}
+.trajet-avion {
+  background-color: #bae2ff;}
+.trajet-avion::before {
+  content: "✈️ ";}
+.tiny-trajet {
+  font-size: 10px;}
+
 
 
 

@@ -96,29 +96,46 @@ if (btnExpandRight) {
   function scrollToDate(date) {
     const timelineScroll = document.querySelector(".timeline-scroll");
     if (!timelineScroll) return;
-
-    // Si timeline.getOffsetForDate(...) n’existe pas, importe getOffsetFromDate
-    // depuis dateHelpers.js et l’utilise. Ex:
-    // const offset = getOffsetFromDate(date);
-    // timelineScroll.scrollLeft = offset - 100;
+  
     if (typeof timeline.getOffsetForDate === 'function') {
-      const offset = timeline.getOffsetForDate(date);
-      timelineScroll.scrollLeft = offset - 100;
+      // 🔁 Crée une nouvelle date avec la même année/mois/jour, mais à 8h00
+      const eightAM = new Date(date);
+      eightAM.setHours(8, 0, 0, 0);
+  
+      const offset = timeline.getOffsetForDate(eightAM);
+      const viewportWidth = timelineScroll.clientWidth;
+      const dynamicPadding = 150;
+  
+      const targetScroll = Math.max(0, offset - dynamicPadding);
+  
+      console.log(`📦 scrollToDate(${date.toLocaleDateString()} @ 08:00)`);
+      console.log(`↳ Offset à 8h: ${offset}px, Viewport: ${viewportWidth}px, Padding: ${dynamicPadding}px`);
+      console.log(`🎯 Final scrollLeft: ${targetScroll}px`);
+  
+      timelineScroll.scrollLeft = targetScroll;
+    } else {
+      console.warn("❌ timeline.getOffsetForDate non défini");
     }
   }
+  
+  
+  
 
   function handleGotoDate(value) {
     const now = new Date();
     const currentYear = now.getFullYear();
+    console.log(`📅 Date actuelle : ${now.toLocaleString()} (année ${currentYear})`);
   
     const parts = value.split("/");
     if (parts.length !== 2) {
-      console.warn("Format attendu: jj/mm");
+      console.warn("⚠️ Format attendu: jj/mm — reçu :", value);
       return;
     }
   
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; // JS month = 0-indexed
+  
+    console.log(`🔍 Analyse input : jour = ${day}, mois = ${month + 1}`);
   
     // Crée les trois variantes autour de l’année actuelle
     const dates = [
@@ -126,6 +143,9 @@ if (btnExpandRight) {
       new Date(currentYear,     month, day),
       new Date(currentYear + 1, month, day)
     ];
+  
+    console.log("🧪 Candidats date générés :");
+    dates.forEach((d, i) => console.log(`  - Année ${currentYear - 1 + i} : ${d.toLocaleDateString()}`));
   
     // Choisit la date la plus proche de maintenant
     let closest = dates[0];
@@ -139,8 +159,10 @@ if (btnExpandRight) {
       }
     }
   
+    console.log(`✅ Date la plus proche retenue : ${closest.toLocaleDateString()}`);
     scrollToDate(closest);
   }
+  
   
   function enableHorizontalDragScroll(containerSelector) {
     const container = document.querySelector(containerSelector);

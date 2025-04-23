@@ -11,9 +11,6 @@ import { auth, db } from "../config/firebaseConfig.js"; // ajustez selon votre c
    (on ne les modifie pas)
 ========================================================= */
 
-/**
- * Fonction generateHeader(), telle que dans ton snippet
- */
 function generateHeader(dayStart, dayEnd, pixelsPerHourDay, dayWidth, nightWidth, weekendWidth) {
   const hourContainer = document.getElementById("header-timeline");
   const dayContainer = document.getElementById("day-labels");
@@ -81,11 +78,6 @@ function generateHeader(dayStart, dayEnd, pixelsPerHourDay, dayWidth, nightWidth
   return totalWidth;
 }
 
-
-
-/**
- * Fonction addStartOfDayLines(), telle que dans ton snippet
- */
 function addStartOfDayLines() {
   // Récupération des conteneurs des headers
   const hourHeader = document.getElementById("header-timeline");
@@ -112,9 +104,6 @@ function addStartOfDayLines() {
   });
 }
 
-/**
- * Fonction generateTechnicianLines(totalWidth), telle que dans ton snippet
- */
 function generateTechnicianLines(totalWidth) {
   document.querySelectorAll("#calendar .technician-row .timeline-content").forEach(timeline => {
     timeline.innerHTML = "";
@@ -168,6 +157,43 @@ function generateTechnicianLines(totalWidth) {
     });
   });
 }
+
+function adjustFontSizeToFit(element, maxFontSize = 14, minFontSize = 10) {
+  if (!element) return;
+  
+  element.style.fontSize = maxFontSize + "px";
+  element.style.whiteSpace = "nowrap";
+  element.style.overflow = "hidden";
+
+  const availableWidth = element.getBoundingClientRect().width;
+  let fontSize = maxFontSize;
+
+  console.log(`🧪 [FontFit] ${element.className} — dispo: ${availableWidth}px, scroll: ${element.scrollWidth}px`);
+
+  while (element.scrollWidth > availableWidth && fontSize > minFontSize) {
+    fontSize -= 0.5;
+    element.style.fontSize = fontSize + "px";
+    console.log(`↘ ${element.className} réduit à ${fontSize}px (scroll: ${element.scrollWidth}, client: ${element.clientWidth})`);
+  }
+
+  if (element.scrollWidth > availableWidth) {
+    element.style.whiteSpace = "normal";
+    element.style.fontSize = minFontSize + "px";
+    element.style.overflowWrap = "break-word";
+    element.style.wordBreak = "break-word";
+    console.warn(`💥 ${element.className} toujours trop large — wrap forcé à ${minFontSize}px`);
+  } else {
+    console.log(`✅ ${element.className} ajustée à ${fontSize}px`);
+  }
+}
+
+
+
+
+
+
+
+
 
 
 
@@ -238,7 +264,6 @@ export class TimelineRenderer {
     }
   }
 
-
   getOffsetForDate(date) {
     if (typeof window.computeOffsetFromDateTime === 'function') {
       return window.computeOffsetFromDateTime(date);
@@ -255,7 +280,7 @@ export class TimelineRenderer {
     interact(block).draggable({
       listeners: {
         start(event) {
-          block.dataset.initialLeft = parseFloat(block.style.left) || 0;
+          block.dataset.initialLeft = parseFloat(block.style.left || "0") || 0;
           block.dataset.totalDx = 0;
         },
         move(event) {
@@ -308,6 +333,11 @@ export class TimelineRenderer {
         left: block.querySelector(".resize-handle.left"),
         right: block.querySelector(".resize-handle.right")
       },
+      modifiers: [
+        interact.modifiers.restrictSize({
+          min: { width: 30 },
+        }),
+      ],      
       listeners: {
         start(event) {
           block._initialResizeLeft = parseFloat(block.style.left) || 0;
@@ -348,6 +378,7 @@ export class TimelineRenderer {
           document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`).forEach(b => {
             b.style.left = `${displayLeft}px`;
             b.style.width = `${displayWidth}px`;
+              self.setLabel(b, intervention);
           });
   
           intervention.dateDebut = newStart;
@@ -355,6 +386,10 @@ export class TimelineRenderer {
   
           self.updateTrajets(intervention);
           self.updateTrajetsDOM(intervention);
+          const updatedBlock = document.querySelector(`.intervention[data-id="${intervention._id}"]`);
+          if (updatedBlock) self.setLabel(updatedBlock, intervention);
+
+
         },
         end: async () => {
           if (!intervention.dateDebut || !intervention.dateFin) return;
@@ -376,6 +411,11 @@ export class TimelineRenderer {
   
     interact(trajetBlock).resizable({
       edges: trajet.direction === 'left' ? { left: true } : { right: true },
+      modifiers: [
+        interact.modifiers.restrictSize({
+          min: { width: 15 },
+        }),
+      ], 
       listeners: {
         start(event) {
           trajetBlock._initialLeft = parseFloat(trajetBlock.style.left) || 0;
@@ -407,14 +447,9 @@ export class TimelineRenderer {
             b.style.width = `${displayWidth}px`;
           });
   
-          const newStart = computeDateTimeFromOffset(displayLeft);
-          const newEnd = computeDateTimeFromOffset(displayLeft + displayWidth);
-  
-          if (!isNaN(newStart) && !isNaN(newEnd)) {
-            trajet.dateDebut = newStart;
-            trajet.dateFin = newEnd;
-            trajet.dureeTrajet = Math.round(displayWidth * 120000);
-          }
+          // 🧠 Calcul de la nouvelle durée uniquement en fonction du width
+          trajet.dureeTrajet = displayWidth * 120000; // 2 minutes par pixel
+          console.log(`📏 Nouvelle largeur trajet ${trajet.direction} : ${displayWidth}px => ${trajet.dureeTrajet}ms`);
         },
         end: async () => {
           try {
@@ -430,6 +465,7 @@ export class TimelineRenderer {
       }
     });
   }
+  
 
   checkForOverlap(newStart, newEnd, currentIntervention) {
     return window.dataManager.interventions.some(other => {
@@ -455,11 +491,6 @@ export class TimelineRenderer {
     });
   }
 
-  
-  
-  
-  
-  
   
   updateTrajets(intervention) {
     if (!Array.isArray(intervention.trajets)) return;
@@ -508,131 +539,181 @@ export class TimelineRenderer {
     });
   }
   
+  setLabel(interDiv, inter) {
+    // 🔥 Supprime toutes les anciennes lignes
+    interDiv.querySelectorAll(".inst-line, .client-line, .ville-line").forEach(el => el.remove());
+  
+    const linesToResize = [];
+  
+    // ✅ Ajouter inst-line SEULEMENT si largeur du bloc >= 45px
+    const blocWidth = interDiv.getBoundingClientRect().width;
+    const tailleMinPx = 45;
+  
+    if (blocWidth > tailleMinPx) {
+      const inst = document.createElement("div");
+      inst.className = "fit-line inst-line";
+      inst.textContent = inter.ticketName || "Intervention";
+      interDiv.appendChild(inst);
+      linesToResize.push(inst);
+      console.log(`📏 .inst-line RENDUE (largeur: ${Math.round(blocWidth)}px)`);
+    } else {
+      console.log(`❌ .inst-line NON rendue (largeur: ${Math.round(blocWidth)}px) — Texte pivoté`);
+    }
+
+    const client = document.createElement("div");
+    client.className = "fit-line client-line";
+    client.textContent = inter.clientName || "";
+    interDiv.appendChild(client);
+    linesToResize.push(client);
+  
+    const ville = document.createElement("div");
+    ville.className = "fit-line ville-line";
+    ville.textContent = inter.ville || "";
+    interDiv.appendChild(ville);
+    linesToResize.push(ville);
+    
+    // ⚙️ Resize après affichage
+    requestAnimationFrame(() => {
+      linesToResize.forEach(line => adjustFontSizeToFit(line));
+    });
+  }
+
   renderAllInterventions() {
+    // 🔥 Supprime tout le planning actuel (interventions + trajets)
     document.querySelectorAll("#calendar .timeline-content .intervention, #calendar .timeline-content .trajet-block")
       .forEach(el => el.remove());
   
     const interventions = window.dataManager.interventions;
-    if (!interventions || interventions.length === 0) return;
+    console.log("🧪 Interventions à afficher :", interventions);
+    if (!interventions || interventions.length === 0) {
+      console.warn("[TimelineRenderer] Aucune intervention à afficher.");
+      return;
+    }
   
     interventions.forEach(inter => {
-      //this.updateTrajets(inter);
-      const rows = Array.isArray(inter.technicianRows)
-      ? inter.technicianRows
-      : [];
-    if (rows.length === 0) {
-      console.warn(`[TimelineRenderer] ⚠️ skip ${inter._id} car technicianRows invalide:`, inter.technicianRows);
-      return;
-    }
-      const offsetStart = computeOffsetFromDateTime(new Date(inter.dateDebut));
-      const offsetEnd = computeOffsetFromDateTime(new Date(inter.dateFin));
-      const width = offsetEnd - offsetStart;
-      
-      rows.forEach(rowId => {
-        const rowSelector = `#calendar .technician-row:nth-child(${rowId}) .timeline-content`;
-        const rowEl = document.querySelector(rowSelector);
-        if (!rowEl) return;
+      // 🧱 Rendu principal de l'intervention
+      console.log("🧪 Rendu intervention :", inter);
+      this.renderIntervention(inter);
   
-        const interDiv = document.createElement("div");
-        interDiv.className = "intervention";
-        interDiv.dataset.id = inter._id;
-        interDiv.style.position = "absolute";
-        interDiv.style.left = `${offsetStart}px`;
-        interDiv.style.width = `${width}px`;
-        interDiv.innerHTML = `
-          <div class="resize-handle left"></div>
-          <div class="resize-handle right"></div>
-          <div class="inst-line">${inter.ticketName || "Intervention"}</div>
-          <div class="client-line">${inter.clientName || ""}</div>
-          <div class="ville-line">${inter.ville || ""}</div>
-        `;
-        rowEl.appendChild(interDiv);
-        this.setupDragResize(interDiv, inter);
-  
-        if (Array.isArray(inter.trajets)) {
-          inter.trajets.forEach(t => {
-            const trajetDiv = document.createElement("div");
-            trajetDiv.className = `trajet-block trajet-${t.direction}`;
-            trajetDiv.dataset.id = inter._id;
-            trajetDiv.style.position = "absolute";
-
-            const msPerHour = 3600000;
-            const w = (t.dureeTrajet / msPerHour) * pixelsPerHourDay;
-            let left;
-            if (t.direction === 'left') {
-              left = offsetStart - w;
-            } else {
-              left = offsetStart + width;
-            }
-            trajetDiv.style.left = `${left}px`;
-            trajetDiv.style.width = `${w}px`;
-            trajetDiv.textContent = "🚘";
-            rowEl.appendChild(trajetDiv);
-            this.setupDragResizeTrajet(trajetDiv, inter, t);
-          });
-        }
-      });
-    });
-  }
-  renderIntervention(inter) {
-    const rows = Array.isArray(inter.technicianRows) ? inter.technicianRows : [];
-    if (rows.length === 0) {
-      console.warn(`[TimelineRenderer] ⚠️ skip renderIntervention pour ${inter._id}, technicianRows invalide`);
-      return;
-    }
-    const offsetStart = computeOffsetFromDateTime(new Date(inter.dateDebut));
-    const offsetEnd = computeOffsetFromDateTime(new Date(inter.dateFin));
-    const width = offsetEnd - offsetStart;
-  
-    rows.forEach(rowId => {
-      const rowSelector = `#calendar .technician-row:nth-child(${rowId}) .timeline-content`;
-      const rowEl = document.querySelector(rowSelector);
-      if (!rowEl) {
-        console.warn(`[TimelineRenderer] pas de .technician-row pour index ${rowId}`);
-        return;
-      }
-      const interDiv = document.createElement("div");
-      interDiv.className = "intervention";
-      interDiv.dataset.id = inter._id;
-      interDiv.style.position = "absolute";
-      interDiv.style.left = `${offsetStart}px`;
-      interDiv.style.width = `${width}px`;
-      interDiv.innerHTML = `
-        <div class="resize-handle left"></div>
-        <div class="resize-handle right"></div>
-        <div class="inst-line">${inter.ticketName || "Intervention"}</div>
-        <div class="client-line">${inter.clientName || ""}</div>
-        <div class="ville-line">${inter.ville || ""}</div>
-      `;
-  
-      rowEl.appendChild(interDiv);
-      this.setupDragResize(interDiv, inter);
-  
+      // 🚌 Ajout des trajets associés à cette intervention
       if (Array.isArray(inter.trajets)) {
-        inter.trajets.forEach(t => {
-          const trajetDiv = document.createElement("div");
-          trajetDiv.className = `trajet-block trajet-${t.direction}`;
-          trajetDiv.dataset.id = inter._id;
-          trajetDiv.style.position = "absolute";
-  
-          const msPerHour = 3600000;
-          const w = (t.dureeTrajet / msPerHour) * pixelsPerHourDay;
-          let left;
-          if (t.direction === 'left') {
-            left = offsetStart - w;
-          } else {
-            left = offsetStart + width;
-          }
-  
-          trajetDiv.style.left = `${left}px`;
-          trajetDiv.style.width = `${w}px`;
-          trajetDiv.textContent = "🚘";
-          rowEl.appendChild(trajetDiv);
-          this.setupDragResizeTrajet(trajetDiv, inter, t);
+        inter.trajets.forEach(trajet => {
+          this.renderTrajetBlock(inter, trajet);
         });
       }
     });
+  }  
+  renderIntervention(intervention) {
+    if (!intervention || !Array.isArray(intervention.technicianRows)) return;
+    console.log("🧱 renderIntervention() appelée pour :", intervention._id);
+
+  
+    const left = computeOffsetFromDateTime(intervention.dateDebut);
+    const width = computeOffsetFromDateTime(intervention.dateFin) - left;
+  
+    intervention.technicianRows.forEach(rowId => {
+      console.log(`🧩 Tentative de rendu pour row: ${rowId}, intervention: ${intervention._id}`);
+    
+      const row = document.querySelector(`#calendar .technician-row[data-row="${rowId}"] .timeline-content`);
+
+      if (!row) {
+        console.warn(`❌ Row introuvable pour rowId: ${rowId}`);
+        return;
+      }
+    
+      const interDiv = document.createElement("div");
+      interDiv.className = "intervention";
+      interDiv.dataset.id = intervention._id;
+      interDiv.style.left = `${left}px`;
+      interDiv.style.width = `${width}px`;
+      
+      const leftHandle = document.createElement("div");
+      leftHandle.className = "resize-handle left";
+      const rightHandle = document.createElement("div");
+      rightHandle.className = "resize-handle right";
+      interDiv.appendChild(leftHandle);
+      interDiv.appendChild(rightHandle);
+
+    
+      row.appendChild(interDiv);
+      console.log(`✅ Bloc intervention ajouté à row ${rowId} [intervention ${intervention._id}]`);
+    
+      this.setupDragResize(interDiv, intervention);
+      console.log(`🔧 DragResize initialisé pour ${intervention._id}`);
+    
+      this.setLabel(interDiv, intervention);
+      console.log(`🏷️ setLabel appliqué à intervention ${intervention._id}`);
+    });
+    
+  
+    // 👇 Ajoute les trajets associés à cette intervention
+    if (Array.isArray(intervention.trajets)) {
+      intervention.trajets.forEach(trajet => {
+        this.renderTrajetBlock(intervention, trajet);
+      });
+    }
   }
+  renderTrajetBlock(intervention, trajet) {
+    if (!trajet || !trajet.direction || !intervention.technicianRows || intervention.technicianRows.length === 0) {
+      console.warn("❌ [renderTrajetBlock] Trajet invalide ou intervention sans techniciens :", trajet);
+      return;
+    }
+  
+    const interBlock = document.querySelector(`.intervention[data-id="${intervention._id}"]`);
+    if (!interBlock) {
+      console.warn("❌ [renderTrajetBlock] Bloc intervention introuvable :", intervention._id);
+      return;
+    }
+  
+    const interLeft  = parseFloat(interBlock.style.left);
+    const interWidth = parseFloat(interBlock.style.width);
+    const width      = (trajet.dureeTrajet / 3600000) * pixelsPerHourDay;
+  
+    let left;
+    if (trajet.direction === "left") {
+      left = interLeft - width;
+    } else {
+      left = interLeft + interWidth;
+    }
+  
+    const trajetBlock = document.createElement("div");
+    trajetBlock.className = `trajet-block trajet-${trajet.direction}`;
+    trajetBlock.dataset.id = intervention._id;
+    trajetBlock.style.left = `${left}px`;
+    trajetBlock.style.width = `${width}px`;
+    this.renderTypeTrajet(intervention, trajetBlock);
+  
+    intervention.technicianRows.forEach(rowId => {
+      const row = document.querySelector(`#calendar .technician-row[data-row="${rowId}"] .timeline-content`);
+      if (row) {
+        const clone = trajetBlock.cloneNode(true);
+        row.appendChild(clone);
+        this.setupDragResizeTrajet(clone, intervention, trajet);
+      }
+    });
+  }
+  renderTypeTrajet(intervention, trajetBlock) {
+    const validTypes = ['voiture', 'train', 'avion'];
+    const type = validTypes.includes(intervention.typeTrajet) ? intervention.typeTrajet : 'voiture';
+  
+    trajetBlock.dataset.typeTrajet = type;
+  
+    // Nettoie les anciennes classes
+    trajetBlock.classList.remove('trajet-voiture', 'trajet-train', 'trajet-avion', 'tiny-trajet');
+    trajetBlock.classList.add(`trajet-${type}`);
+  
+    // Vérifie la taille pour ajuster la police
+    const width = parseFloat(trajetBlock.style.width);
+    if (width === 15) {
+      trajetBlock.classList.add('tiny-trajet');
+      console.log(`🔍 Trajet étroit détecté (15px), réduction de la taille de police appliquée`);
+    }
+  
+    console.log(`🚗 [renderTypeTrajet] ID ${intervention._id} → type: ${type}, width: ${width}px`);
+  }
+  
+  
+  
   updateSingleIntervention(intervention) {
     if (!intervention || !intervention._id) {
       console.warn("❌ Intervention invalide ou sans ID :", intervention);
