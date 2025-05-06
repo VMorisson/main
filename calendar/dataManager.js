@@ -1,35 +1,14 @@
 // dataManager.js
 
-/**
- * Cette classe DataManager gère:
- *  - Le chargement des interventions depuis l'API (ton serveur Node/Express/Mongo)
- *  - La création / mise à jour / suppression via fetch()
- *  - La conversion "technicianRow" string -> tableau [1,2,3]
- *  - L'ajout d'un champ "trajets" sous forme de tableau d'objets { direction, dateDebut, dateFin, type }
- * 
- * En front-end (avec Vite), tu peux faire :
- *   import { DataManager } from './dataManager.js';
- *   const dataManager = new DataManager();
- *   dataManager.loadInterventions(...)...
- * 
- * Attention : 
- *  - `fetch('http://localhost:3000/api/...')` suppose que ton serveur Express tourne en local sur ce port.
- *    Si tu déploies ailleurs, change l'URL par la bonne.
- */
-
-const IS_PROD = typeof window !== "undefined" &&
-                window.location.hostname !== "localhost";
-
-const API_BASE = IS_PROD
-  ? window.location.origin
-  : "http://localhost:3000";
+import { API_BASE } from "./dateHelpers.js";
 
 export class DataManager {
   constructor() {
     this.interventions = [];
   }
     
-     
+  
+  
     /**
      * Charge toutes les interventions entre "start" et "end" (dates).
      * NOTE: Dans ton server.js actuel, la route GET /api/interventions
@@ -49,9 +28,11 @@ export class DataManager {
         const response = await fetch(url);
         if (!response.ok) return [];
         const rawData = await response.json();
+        const adjustedEnd = new Date(end);
+        adjustedEnd.setDate(adjustedEnd.getDate() + 1);
         this.interventions = rawData
           .map(obj => this.buildInterventionFromAPI(obj))
-          .filter(i => i.dateDebut instanceof Date && !isNaN(i.dateDebut) && i.dateDebut >= start && i.dateFin <= end);
+          .filter(i => i.dateDebut instanceof Date && !isNaN(i.dateDebut) && i.dateDebut >= start && i.dateFin <= adjustedEnd);
         return this.interventions;
       } catch (err) {
         console.error("Erreur de chargement:", err);
@@ -231,7 +212,7 @@ export class DataManager {
             console.error("❌ [saveIntervention] POST échoué:", created);
             return undefined;
           }
-    
+          
           const newInterv = this.buildInterventionFromAPI(created);
           console.log("🎁 [saveIntervention] Nouvelle intervention nettoyée:", newInterv);
     
@@ -271,7 +252,7 @@ export class DataManager {
       const sinceIso = sinceDate.toISOString();
       const url = `${API_BASE}/api/interventions?since=${sinceIso}&ts=${Date.now()}`; // ts pour éviter le cache
     
-      console.log(`[POLL] Checking for updates since ${sinceIso}`);
+      // console.log(`[POLL] Checking for updates since ${sinceIso}`);
     
       try {
         const response = await fetch(url, {
@@ -288,10 +269,10 @@ export class DataManager {
         }
     
         const rawData = await response.json();
-        console.log("[POLL] Données brutes reçues :", rawData);
+        // console.log("[POLL] Données brutes reçues :", rawData);
 
         const updated = rawData.map(obj => this.buildInterventionFromAPI(obj));
-        console.log(`[POLL] ✅ ${updated.length} updates received`);
+        // console.log(`[POLL] ✅ ${updated.length} updates received`);
     
         return updated;
       } catch (err) {

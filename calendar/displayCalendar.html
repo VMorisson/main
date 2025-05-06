@@ -13,40 +13,62 @@
     <button id="scroll-today-btn">Aujourd’hui</button>
     <input type="text" id="goto-date" maxlength="5" placeholder="jj/mm">
   </div>
-  
-  <!-- Conteneur scrollable -->
-  <div class="timeline-scroll">
-    <div id="expand-left-zone" class="expand-zone left">
-      <button id="expand-left-btn">+</button>
+  <div class="calendar-wrapper">
+    <div class="labels-column" id="labels-column">
+      <!-- Les labels nomPresta apparaîtront ici -->
     </div>
-    <div class="zone-calendar">
-      <div id="day-labels"></div>
-      <div id="header-timeline"></div>    
-
-      <!-- 3) Les lignes techniciens -->
-      <div id="calendar">
-        <!-- LIGNE DU TECHNICIEN 1 -->
-        <div class="technician-row" data-row="1">
-          <div class="timeline-content"></div>
-        </div>
-        <!-- LIGNE DU TECHNICIEN 2 -->
-        <div class="technician-row" data-row="2">
-          <div class="timeline-content"></div>
-        </div>
-        <!-- LIGNE DU TECHNICIEN 3 -->
-        <div class="technician-row" data-row="3">
-          <div class="timeline-content"></div>
-        </div>
-        <!-- Ajoute autant de lignes que nécessaire -->
+    <!-- Conteneur scrollable -->
+    <div class="timeline-scroll">
+      <div id="expand-left-zone" class="expand-zone left">
+        <button id="expand-left-btn">+</button>
       </div>
-    </div>
-    <div id="expand-right-zone" class="expand-zone right">
-      <button id="expand-right-btn">+</button>
+      <div class="zone-calendar">
+        <div id="day-labels"></div>
+        <div id="header-timeline"></div>    
+
+        <!-- 3) Les lignes techniciens -->
+        <div id="calendar">
+          <div class="technician-row" data-row="1">
+            <div class="timeline-content"></div>
+          </div>
+          <div class="technician-row" data-row="2">
+            <div class="timeline-content"></div>
+          </div>
+          <div class="technician-row" data-row="3">
+            <div class="timeline-content"></div>
+          </div>
+          <!-- 4 à 8 (5 lignes) dispo pour nouveaux techs LAUREA -->
+          <div class="technician-row" data-row="9">
+            <div class="timeline-content"></div>
+          </div>
+          <!-- 10ème ligne dispo pour 2ème ligne LAUREA -->
+          <div class="technician-row" data-row="11">
+            <div class="timeline-content"></div>
+          </div>
+          <div class="technician-row" data-row="12">
+            <div class="timeline-content"></div>
+          </div>
+          <div class="technician-row" data-row="13">
+            <div class="timeline-content"></div>
+          </div>
+          <div class="technician-row" data-row="14">
+            <div class="timeline-content"></div>
+          </div>
+          <div class="technician-row" data-row="15">
+            <div class="timeline-content"></div>
+          </div>
+          <!-- Ajoute autant de lignes que nécessaire -->
+        </div>
+      </div>
+      <div id="expand-right-zone" class="expand-zone right">
+        <button id="expand-right-btn">+</button>
+      </div>
     </div>
   </div>
 
   
   <!-- Ton script principal, qui appelle initCalendar() -->
   <script type="module" src="./initCalendar.js"></script>
+
 </body>
 </html>

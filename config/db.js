@@ -47,23 +47,20 @@ const espaceSchema = new mongoose.Schema({
 });
 
 const interventionSchema = new mongoose.Schema({
-  technician:    { type: String, required: false },
+  technician:    { type: [String], required: true, enum: ['Romain','Lucas','Rodrigue','LAUREA','PRESTA']},
+  technicianNames: { type: [String], required: false},
   dateDebut:     { type: Date,   required: true },
   dateFin:       { type: Date,   required: true },
   ticketName:    { type: String },
   clientName:    { type: String },
   ville:         { type: String },
-  technicianNames: {
-        type: [String],
-        required: true,
-        enum: ['Romain','Lucas','Rodrigue','LAUREA','Presta']},
-  nomPresta:  { type: String , required: false },
+
   technicianRows: {
     type: [Number],
     required: true,
     validate: {
       validator: arr => arr.length > 0,
-      message: "technicianRows ne peut pas être vide"
+      message: "Vous devez cocher une case technicien."
     }
   },
   typeTrajet: { type: String, enum: ['voiture','train', 'avion'], default: 'voiture' },
@@ -74,11 +71,24 @@ const interventionSchema = new mongoose.Schema({
   dateModif:     { type: Date, default: Date.now },
 });
 
+const villeSchema = new mongoose.Schema({
+  ville: { type: String, required: true },
+  codePostal: { type: String, required: true },
+  latitude: { type: Number },
+  longitude: { type: Number },
+  pays: { type: String }
+}, { collection: "villes" });
+
+
+
+
+
 // Création des modèles
 const Parc         = mongoose.model('Parc', parcSchema);
 const Client       = mongoose.model('Client', clientSchema);
 const Site         = mongoose.model('Site', siteSchema);
 const Espace       = mongoose.model('Espace', espaceSchema);
+const Ville        = mongoose.model('Ville', villeSchema);
 const Intervention = mongoose.model('Intervention', interventionSchema);
 
-module.exports = { Parc, Client, Site, Espace, Intervention };
+module.exports = { Parc, Client, Site, Espace, Ville, Intervention };

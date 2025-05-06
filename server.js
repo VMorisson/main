@@ -7,14 +7,8 @@ const app = express();
 const { ObjectId } = require('mongoose').Types; // Importer ObjectId
 
 // Importation de la configuration MongoDB et des modèles
-const { Parc, Client, Site, Espace, Intervention} = require('./config/db.js');
-const nameToId = {
-  'Romain':   1,
-  'Lucas':    2,
-  'Rodrigue': 3,
-  'LAUREA':   4,
-  'Presta':   5,
-};
+const { Parc, Client, Site, Espace, Ville, Intervention} = require('./config/db.js');
+
 const cors = require('cors');
 app.use(cors());
 
@@ -155,14 +149,14 @@ app.post('/api/interventions', async (req, res) => {
     const data = req.body;
     delete data.dateModif; // nope, on veut pas ton champ vérolé
     data.dateModif = new Date();
-    if (Array.isArray(data.technicianNames)) {
-            data.technicianRows = data.technicianNames
-              .map(n => nameToId[n])
-              .filter(n => !!n);
-          }
-          if (!Array.isArray(data.technicianRows) || data.technicianRows.length === 0) {
-            return res.status(400).json({ error: "Aucun technicien valide fourni" });
-          }
+    // if (Array.isArray(data.technicianNames)) {
+    //         data.technicianRows = data.technicianNames
+    //           .map(n => nameToId[n])
+    //           .filter(n => !!n);
+    //       }
+    if (!Array.isArray(data.technicianRows) || data.technicianRows.length === 0) {
+      return res.status(400).json({ error: "Aucun technicien valide fourni" });
+    }
           
     const newIntervention = new Intervention(data);
     const savedIntervention = await newIntervention.save();
@@ -179,14 +173,14 @@ app.put('/api/interventions/:id', async (req, res) => {
     console.log("[PUT] data =", data);
     delete data.dateModif; // nope, on veut pas ton champ vérolé
     data.dateModif = new Date();
-    if (Array.isArray(data.technicianNames)) {
-            data.technicianRows = data.technicianNames
-              .map(n => nameToId[n])
-              .filter(n => !!n);
-          }
-          if (!Array.isArray(data.technicianRows) || data.technicianRows.length === 0) {
-            return res.status(400).json({ error: "Aucun technicien valide fourni" });
-          }
+    // if (Array.isArray(data.technicianNames)) {
+    //         data.technicianRows = data.technicianNames
+    //           .map(n => nameToId[n])
+    //           .filter(n => !!n);
+    //       }
+    if (!Array.isArray(data.technicianRows) || data.technicianRows.length === 0) {
+      return res.status(400).json({ error: "Aucun technicien valide fourni" });
+    }
           
     const updatedIntervention = await Intervention.findByIdAndUpdate(
       req.params.id,
@@ -214,6 +208,51 @@ app.delete('/api/interventions/:id', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.get('/api/villes', async (req, res) => {
+  const q = req.query.q || "";
+  if (q.length < 2) return res.json([]);
+
+  const regexVille = new RegExp("^" + q, "i");
+  try {
+    const results = await Ville.find({ ville: regexVille }).limit(20).lean();
+
+    res.json(results.map(v => ({
+      label: `${v.ville} (${v.codePostal})`,
+      value: v.ville,
+      ville: v.ville,
+      codePostal: v.codePostal,
+      latitude: v.latitude,
+      longitude: v.longitude,
+      pays: v.pays
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/villes/by-code-postal", async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.length < 2) return res.json([]);
+  try {
+    const villes = await Ville.find({
+      codePostal: { $regex: "^" + q }
+    }).lean();
+
+    console.log(`[API by-code-postal] q=${q} → ${villes.length} résultats`);
+    res.json(villes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
+
+
+
+
 
 
 const PORT = process.env.PORT || 3000;   // Render fournit PORT en prod

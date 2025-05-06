@@ -25,18 +25,50 @@ body {
   text-align: center;
 }
 
+.calendar-wrapper {
+  display: flex;
+  flex-direction: row;
+  width: calc(100% - 20px); /* 100% de la largeur moins les marges */
+  height: 100%;
+  margin-left: 10px;
+  margin-right: 10px;    /* si besoin d’absolus */
+}
+.labels-column {
+  margin-top: 62.5px;
+  border-top: 2px solid #000000;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #000000;
+  border-left: 2px solid #000000;
+  width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 15px;
+  background-color: #f3f3f3;
+}
+.labels-column .label-row {
+  height: 60px; /* ou ce qui correspond à la hauteur de .technician-row */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #797979;
+  font-weight: bold;
+  width: 100%;  
+  box-sizing: border-box;
+}
+
 /* ================================
    Conteneur Scrollable (timeline)
 ================================ */
 .timeline-scroll {
   display: block;        /* ou flex, si tu préfères */
   overflow-x: auto;      /* scroll horizontal */
-  border: 1px solid #ccc;
+  border: 2px solid #000000;
   user-select: none;     /* évite la sélection de texte */
   cursor: grab;          /* curseur "main qui attrape" */
   position: relative;
-  margin-left: 10px;
-  margin-right: 10px;    /* si besoin d’absolus */
+
   /* tu peux définir une hauteur:
      height: 300px; 
      ou laisser auto
@@ -98,11 +130,20 @@ border-bottom: 2px solid #2d2d2d;
   top: 0; left: 0;
   width: 100%;
   height: 100%;
-  background-color: #f4f4f4;
   z-index: -1;
   box-sizing: border-box;
   border: 1px solid #ccc;
 }
+.label-row.zone-tech    { background-color: #f0f8ff; }
+.label-row.zone-laurea  { background-color: #fff8dc; }
+.label-row.zone-presta  { background-color: #f5f5f5; }
+
+.timeline-background.zone-tech    { background-color: #f0f8ff; }
+.timeline-background.zone-laurea  { background-color: #fff8dc; }
+.timeline-background.zone-presta  { background-color: #f5f5f5; }
+
+
+
 
 /* ================================
    Blocs horaires
@@ -205,7 +246,6 @@ border-bottom: 2px solid #2d2d2d;
   box-sizing: border-box;
   border: 1px solid #000;
   z-index: 100;
-
   touch-action: none;
 }
 
@@ -219,7 +259,7 @@ border-bottom: 2px solid #2d2d2d;
   background-color: rgba(128, 128, 128, 0.4); /* gris transparent */
   /*padding-bottom: 1px;*/
   border-bottom: 1px solid #000; /* bordure inférieure */
-  text-align: center;
+  top: 0px;
 }
 
 /* client-line : texte en gras */
@@ -233,13 +273,54 @@ border-bottom: 2px solid #2d2d2d;
   margin-top: -1px;
   text-decoration: underline;
 }
-.rotated-line {
-  transform: rotate(90deg);
-  transform-origin: left top;
-  display: inline-block;
+.inter-time-label {
+  position: absolute;
+  font-size: 11px;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 120;
   white-space: nowrap;
-  text-align: left;
+  font-family: sans-serif;
+  font-weight: bold;
 }
+.inter-time-label.left {
+  top: 0px; /* Affiche AU-DESSUS du bloc */
+  left: 0;
+  transform: translateX(-50%);
+}
+.inter-time-label.right {
+  bottom: 0px;
+  right: 0;
+  transform: translateX(50%);
+}
+
+.trajet-duration-label {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1;
+  pointer-events: none;
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  z-index:110;
+}
+
+
+
+
+
 
 
 
@@ -252,18 +333,13 @@ border-bottom: 2px solid #2d2d2d;
   top: 0;
   width: 11px;
   height: 100%;
-  z-index: 2;
-}
-
+  z-index: 2;}
 .resize-handle.left {
   left: 0;
-  cursor: ew-resize;
-}
-
+  cursor: ew-resize;}
 .resize-handle.right {
   right: 0;
-  cursor: ew-resize;
-}
+  cursor: ew-resize;}
 
 
 /* Style commun à tous les trajets */
@@ -279,8 +355,7 @@ border-bottom: 2px solid #2d2d2d;
   z-index: 99;
   border: 1px solid #000;
   box-sizing: border-box;
-}
-
+  touch-action: none;}
 .trajet-left {
   /* Couleur ou style différent pour left */
   border-right: 0px; }
@@ -315,10 +390,12 @@ border-bottom: 2px solid #2d2d2d;
   z-index: 9999;
 }
 .custom-context-menu ul {
+
   list-style: none;
   margin: 0; padding: 0;
 }
 .custom-context-menu li {
+  text-align: center;
   padding: 5px 10px;
   cursor: pointer;
 }
@@ -329,61 +406,127 @@ border-bottom: 2px solid #2d2d2d;
 
 
 
-/* Overlay de fond : occupe tout l'écran, masque l'arrière-plan */
-.modal-overlay {
+/* Le fond assombri de la modale */
+.modal {
   position: fixed;
   top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  display: none;         /* Par défaut masqué */
-  align-items: center;   /* Centre vertical */
-  justify-content: center; /* Centre horizontal */
-  z-index: 2000;         /* Devant le calendrier */
+  width: 100vw;
+  height: 100vh;
+  display: none;
+  background: rgba(0, 0, 0, 0.4);
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
 }
 
-/* La boîte (dialog) elle-même */
-.modal-dialog {
+/* Le bloc blanc au centre */
+.modal-content {
   background: #fff;
-  padding: 16px;
-  border-radius: 4px;
-  width: 320px;          /* Largeur fixe ou adaptative */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  position: relative;
+  padding: 24px;
+  border-radius: 6px;
+  width: 400px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
 }
 
-.modal-dialog h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
+/* Titre de la boîte */
+.modal-content h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+  color: #333;
 }
 
+/* Un champ du formulaire (label + input) */
 .modal-field {
   display: flex;
-  margin-bottom: 8px;
-  align-items: center;
+  flex-direction: column;
+  margin-bottom: 16px;
 }
 
 .modal-field label {
-  width: 100px;
   font-weight: bold;
-  margin-right: 6px;
+  margin-bottom: 4px;
+  color: #444;
 }
 
-.modal-field input[type="text"] {
-  flex: 1; 
-  padding: 4px;
+.modal-field input[type="text"],
+.modal-field input[type="number"],
+.modal-field input[type="datetime-local"] {
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.autocomplete-dropdown {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  z-index: 9999;
+  max-height: 150px;
+  overflow-y: auto;
+  width: 100%;
+  display: none;
+}
+
+.autocomplete-dropdown div {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.autocomplete-dropdown div:hover {
+  background-color: #eee;
+}
+
+.technician-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.technician-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
 }
 
+/* Champ de texte à côté des cases LAUREA / PRESTA */
+.tech-detail {
+  margin-top: 4px;
+  margin-left: 28px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  width: calc(100% - 32px);
+}
+/* Groupe de boutons */
 .modal-buttons {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
+  margin-top: 12px;
 }
-.technician-checkboxes label {
-  display: inline-block;
-  margin-right: 12px;
-  margin-bottom: 6px;
+.modal-buttons button {
+  padding: 6px 12px;
+  font-size: 14px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
 }
+.modal-buttons button:hover {
+  background-color: #0056b3;
+}
+.modal-buttons button#form-cancel {
+  background-color: #aaa;
+}
+.modal-buttons button#form-cancel:hover {
+  background-color: #888;
+}
+
 
 
 
@@ -414,14 +557,12 @@ border-bottom: 2px solid #2d2d2d;
   cursor: pointer;
 }
 
-.timeline-scroll {
-  position: relative;
-  height: 100%; /* Required for absolute children like the expand zones */
-}
+
 
 .zone-calendar {
-  padding-left: 30px;
+  padding-left: 31px;
 }
+
 
 
 .menu-divider {

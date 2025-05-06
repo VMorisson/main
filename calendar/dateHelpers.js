@@ -2,12 +2,19 @@
 
 // --------------------------------------
 // CONSTANTES DE BASE (modifiables)
-export const dayStart = 8;           // Heure de début du jour (8h)
-export const dayEnd = 18;           // Heure de fin du jour (20h)
+export const dayStart = 7;           // Heure de début du jour (8h)
+export const dayEnd = 19;           // Heure de fin du jour (20h)
 export const pixelsPerHourDay = 30;  // Nombre de pixels pour 1h de journée
 export const nightWidth = 60;        // Largeur fixe pour la nuit (22h–8h)
 export const weekendWidth = 60;      // Largeur fixe pour un weekend
 export const workingDayTotalWidth = (dayEnd - dayStart) * pixelsPerHourDay + nightWidth;
+
+export const IS_PROD = typeof window !== "undefined" &&
+                window.location.hostname !== "localhost";
+
+export const API_BASE = IS_PROD
+  ? window.location.origin
+  : "http://localhost:3000";
 
 // --------------------------------------
 // FONCTIONS UTILITAIRES
@@ -218,7 +225,7 @@ export function computeOffsetFromDateTime(dateTime) {
     offset = seg.end;
   }
   // 🛟 Fallback si aucun segment n’a capté la date
-  console.warn("⛔ Aucun bloc 'hour' n’a capturé", dateTime, "→ fallback getOffsetFromDate()");
+  // console.warn("⛔ Aucun bloc 'hour' n’a capturé", dateTime, "→ fallback getOffsetFromDate()");
   return getOffsetFromDate(dateTime);
 }
 

@@ -69,6 +69,7 @@
     </main>
 
     <!-- Script de chargement -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script type="module">
       import { auth } from "../config/firebaseConfig.js";
       import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
@@ -96,65 +97,32 @@
         .catch((err) => {
           console.error("Erreur lors du chargement du calendrier :", err);
         });
+        
+        // Charger le contenu du menu contextuel et du formulaire
+        fetch("../calendar/displayForm.html")
+          .then((res) => res.text())
+          .then((html) => {
+            // Injecte tout ça dans le body ou dans un div spécifique si tu veux être propre
+            document.body.insertAdjacentHTML('beforeend', html);
+          })
+          .catch((err) => {
+            console.error("Erreur lors du chargement de displayMenuForm.html :", err);
+          });
+        fetch("../calendar/displayContextMenu.html")
+          .then((res) => res.text())
+          .then((html) => {
+            document.body.insertAdjacentHTML("beforeend", html);
+          })
+          .catch((err) => {
+            console.error("Erreur lors du chargement du menu contextuel :", err);
+        });
+
+        
+
 
       // Déconnexion automatique après 10 minutes d’inactivité
       initInactivityLogout(600000);
     </script>
-
-    <!-- Menu contextuel -->
-    <div id="context-menu" class="custom-context-menu" style="display:none;">
-      <ul>
-        <li id="menu-add">➕ Ajouter intervention</li>
-        <li id="menu-show" style="display:none;">📄 Afficher intervention</li>
-        <li id="menu-delete" style="display:none;">🗑️ Supprimer intervention</li>
-        <li id="menu-divider" class="menu-divider" style="display:none;"></li>
-        <li id="menu-toggle-aller" style="display:none;">⬅ Ajouter Trajet Aller</li>
-        <li id="menu-toggle-retour" style="display:none;">Ajouter Trajet Retour ➡</li>
-      </ul>
-    </div>
-
-    <!-- Boîte modale (overlay + conteneur) -->
-    <div class="modal-overlay" id="form-modal" style="display:none;">
-      <div class="modal-dialog">
-        <h3 id="form-title">Ajouter une intervention</h3>
-
-        <div class="modal-field">
-          <label for="form-ticketName">Ticket :</label>
-          <input type="text" id="form-ticketName" />
-        </div>
-
-        <div class="modal-field">
-          <label for="form-clientName">Client :</label>
-          <input type="text" id="form-clientName" />
-        </div>
-
-        <div class="modal-field">
-          <label for="form-ville">Ville :</label>
-          <input type="text" id="form-ville" />
-        </div>
-
-        <div class="modal-field">
-          <label>Techniciens :</label>
-          <div id="tech-container" class="technician-checkboxes"></div>
-        </div>
-        
-
-        <div class="modal-field">
-          <label>Trajet left :</label>
-          <input type="checkbox" id="form-leftTrajet" />
-        </div>
-
-        <div class="modal-field">
-          <label>Trajet right :</label>
-          <input type="checkbox" id="form-rightTrajet" />
-        </div>
-
-        <div class="modal-buttons">
-          <button id="form-save-btn">Enregistrer</button>
-          <button id="form-cancel-btn">Annuler</button>
-        </div>
-      </div>
-    </div>
 
     <div id="polling-timer" style="
     position: fixed;
@@ -171,6 +139,6 @@
     Dernier polling : 0s
     </div>
   
-
+    
   </body>
 </html>

@@ -6,6 +6,10 @@ import interact from "https://cdn.interactjs.io/v1.9.20/interactjs/index.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { auth, db } from "../config/firebaseConfig.js"; // ajustez selon votre config
+import { showInterventionForm } from './interventionForm.js';
+import { rowIdToName } from './configCalendar.js';
+
+
 /* =========================================================
    REPRISE EXACTE DES TROIS FONCTIONS D'ORIGINE
    (on ne les modifie pas)
@@ -17,6 +21,7 @@ function generateHeader(dayStart, dayEnd, pixelsPerHourDay, dayWidth, nightWidth
   hourContainer.innerHTML = "";
   dayContainer.innerHTML = "";
   window.heuresMap = [];
+  window.tempsMap = [];
   window.tempsMap = new Map();
 
   let totalWidth = 0;
@@ -60,7 +65,14 @@ function generateHeader(dayStart, dayEnd, pixelsPerHourDay, dayWidth, nightWidth
             Nuit
          </div>`
       );
-      window.heuresMap.push({ type: "night", start: totalWidth, end: totalWidth + nightWidth, date: new Date(jourDate) });
+      const nightDate = new Date(jourDate);
+      nightDate.setDate(nightDate.getDate() + 1); // ✅ assigner la nuit au jour SUIVANT
+      window.heuresMap.push({
+        type: "night",
+        start: totalWidth,
+        end: totalWidth + nightWidth,
+        date: nightDate
+      });
       totalWidth += nightWidth;
     }
     
@@ -105,21 +117,42 @@ function addStartOfDayLines() {
 }
 
 function generateTechnicianLines(totalWidth) {
-  document.querySelectorAll("#calendar .technician-row .timeline-content").forEach(timeline => {
+  document.querySelectorAll("#calendar .technician-row").forEach(row => {
+    const timeline = row.querySelector(".timeline-content");
+    if (!timeline) return;
+
     timeline.innerHTML = "";
     timeline.style.position = "relative";
     timeline.style.width = totalWidth + "px";
     timeline.style.overflow = "hidden";
-    
+
+    const rowNumber = parseInt(row.dataset.row, 10);
+
+    // ➔ Crée le background
     const bg = document.createElement("div");
     bg.className = "timeline-background";
+
+    if (rowNumber >= 1 && rowNumber <= 8) {
+      bg.classList.add("zone-tech");
+      timeline.classList.add("zone-tech"); // 👈 ajoute ceci
+    } else if (rowNumber >= 9 && rowNumber <= 10) {
+      bg.classList.add("zone-laurea");
+      timeline.classList.add("zone-laurea");
+    } else if (rowNumber >= 11) {
+      bg.classList.add("zone-presta");
+      timeline.classList.add("zone-presta");
+    }
+    
+
     bg.style.width = totalWidth + "px";
     bg.style.height = "100%";
     bg.style.position = "absolute";
     bg.style.top = "0";
     bg.style.left = "0";
+
     timeline.appendChild(bg);
-    
+
+    // ➔ Ajoute tes overlays weekend, nuit et lignes d'heures
     const addedLines = new Set();
     window.heuresMap.forEach(segment => {
       if (segment.type === "weekend" && !addedLines.has(segment.start)) {
@@ -128,6 +161,7 @@ function generateTechnicianLines(totalWidth) {
         overlay.style.left = segment.start + "px";
         overlay.style.width = (segment.end - segment.start) + "px";
         timeline.appendChild(overlay);
+
         const line = document.createElement("div");
         line.className = "hour-line start-of-day";
         line.style.left = segment.start + "px";
@@ -156,7 +190,49 @@ function generateTechnicianLines(totalWidth) {
       }
     });
   });
+  updateLabelColumn();
 }
+function updateLabelColumn() {
+  const labelsCol = document.getElementById("labels-column");
+  if (!labelsCol) return;
+
+  labelsCol.innerHTML = "";
+
+  const maxRow = 20; // Tu peux l'adapter
+  let lastNameUsed = "";
+
+  for (let rowId = 1; rowId <= maxRow; rowId++) {
+    const rowElement = document.querySelector(`.technician-row[data-row="${rowId}"]`);
+    if (!rowElement) continue;
+
+    const label = document.createElement("div");
+    label.className = "label-row";
+
+    // Nom affiché = celui du mapping ou dernier utilisé
+    const currentName = rowIdToName[rowId];
+    if (currentName) {
+      lastNameUsed = currentName;
+    }
+    label.textContent = lastNameUsed;
+
+    // Appliquer les mêmes classes de zone que timeline-content
+    const timeline = rowElement.querySelector(".timeline-content");
+    if (timeline) {
+      if (timeline.classList.contains("zone-tech")) {
+        label.classList.add("zone-tech");
+      } else if (timeline.classList.contains("zone-laurea")) {
+        label.classList.add("zone-laurea");
+      } else if (timeline.classList.contains("zone-presta")) {
+        label.classList.add("zone-presta");
+      }
+    }
+
+    labelsCol.appendChild(label);
+  }
+}
+
+
+
 
 function adjustFontSizeToFit(element, maxFontSize = 14, minFontSize = 10) {
   if (!element) return;
@@ -168,12 +244,12 @@ function adjustFontSizeToFit(element, maxFontSize = 14, minFontSize = 10) {
   const availableWidth = element.getBoundingClientRect().width;
   let fontSize = maxFontSize;
 
-  console.log(`🧪 [FontFit] ${element.className} — dispo: ${availableWidth}px, scroll: ${element.scrollWidth}px`);
+  // console.log(`🧪 [FontFit] ${element.className} — dispo: ${availableWidth}px, scroll: ${element.scrollWidth}px`);
 
   while (element.scrollWidth > availableWidth && fontSize > minFontSize) {
     fontSize -= 0.5;
     element.style.fontSize = fontSize + "px";
-    console.log(`↘ ${element.className} réduit à ${fontSize}px (scroll: ${element.scrollWidth}, client: ${element.clientWidth})`);
+    // console.log(`↘ ${element.className} réduit à ${fontSize}px (scroll: ${element.scrollWidth}, client: ${element.clientWidth})`);
   }
 
   if (element.scrollWidth > availableWidth) {
@@ -183,9 +259,80 @@ function adjustFontSizeToFit(element, maxFontSize = 14, minFontSize = 10) {
     element.style.wordBreak = "break-word";
     console.warn(`💥 ${element.className} toujours trop large — wrap forcé à ${minFontSize}px`);
   } else {
-    console.log(`✅ ${element.className} ajustée à ${fontSize}px`);
+    // console.log(`✅ ${element.className} ajustée à ${fontSize}px`);
   }
 }
+function freezeCalendarOverlays() {
+  console.log("🧊 Lancement de freezeCalendarOverlays");
+
+  if (typeof html2canvas === "undefined") {
+    console.warn("⚠️ html2canvas pas encore chargé. Retente dans 100ms...");
+    setTimeout(freezeCalendarOverlays, 100);
+    return;
+  }
+
+  // Utilise directement les bons éléments .timeline-content avec les classes de zone
+  const getImageForZone = (zoneClass) => {
+    const timeline = document.querySelector(`.timeline-content.${zoneClass}`);
+    if (!timeline) {
+      console.warn(`❌ Pas de .timeline-content trouvé pour .${zoneClass}`);
+      return Promise.resolve(null);
+    }
+
+    console.log(`📸 Capture demandée pour .timeline-content.${zoneClass}`);
+
+    return html2canvas(timeline, {
+      backgroundColor: null,
+      useCORS: true,
+      scale: 1
+    }).then(canvas => {
+      const img = canvas.toDataURL("image/png");
+      console.log(`✅ Capture OK .${zoneClass}, taille: ${img.length}`);
+      return img;
+    }).catch(err => {
+      console.error(`🔥 Erreur capture .${zoneClass}`, err);
+      return null;
+    });
+  };
+
+  Promise.all([
+    getImageForZone("zone-tech"),
+    getImageForZone("zone-laurea"),
+    getImageForZone("zone-presta")
+  ]).then(([techImg, laureaImg, prestaImg]) => {
+    console.log("🎨 Application des fonds capturés…");
+
+    document.querySelectorAll(".timeline-content").forEach(timeline => {
+      const classList = timeline.classList;
+      console.log("🔍 Inspecte :", [...classList]);
+
+      timeline.querySelectorAll(".hour-line, .weekend-overlay, .night-overlay, .start-of-day").forEach(el => el.remove());
+
+      if (classList.contains("zone-tech") && techImg) {
+        console.log("🖼️ Applique fond TECH");
+        timeline.style.backgroundImage = `url(${techImg})`;
+      } else if (classList.contains("zone-laurea") && laureaImg) {
+        console.log("🖼️ Applique fond LAUREA");
+        timeline.style.backgroundImage = `url(${laureaImg})`;
+      } else if (classList.contains("zone-presta") && prestaImg) {
+        console.log("🖼️ Applique fond PRESTA");
+        timeline.style.backgroundImage = `url(${prestaImg})`;
+      } else {
+        console.warn("🚫 Aucun fond applicable à cette ligne");
+      }
+
+      timeline.style.backgroundSize = "cover";
+      timeline.style.backgroundRepeat = "no-repeat";
+      timeline.style.backgroundPosition = "top left";
+    });
+
+
+  });
+}
+
+
+
+
 
 
 
@@ -254,6 +401,7 @@ export class TimelineRenderer {
     );
     addStartOfDayLines();
     generateTechnicianLines(totalWidth);
+    freezeCalendarOverlays();
     const expandRightZone = document.getElementById("expand-right-zone");
     if (expandRightZone) {
       expandRightZone.style.left = totalWidth + "px";
@@ -261,7 +409,7 @@ export class TimelineRenderer {
     const expandLeftZone = document.getElementById("expand-left-zone");
     if (expandLeftZone) {
       expandLeftZone.style.left = "0px";
-    }
+    }    
   }
 
   getOffsetForDate(date) {
@@ -272,49 +420,159 @@ export class TimelineRenderer {
     return 0;
   }
   
+  setLabel(interDiv, inter) {
+    // 🔥 Supprime toutes les anciennes lignes
+    interDiv.querySelectorAll(".inst-line, .client-line, .ville-line").forEach(el => el.remove());
+  
+    const linesToResize = [];
+  
+    // ✅ Ajouter inst-line SEULEMENT si largeur du bloc >= 45px
+    const blocWidth = interDiv.getBoundingClientRect().width;
+    const tailleMinPx = 45;
+  
+    if (blocWidth > tailleMinPx) {
+      const inst = document.createElement("div");
+      inst.className = "fit-line inst-line";
+      inst.textContent = inter.ticketName || "Intervention";
+      interDiv.appendChild(inst);
+      linesToResize.push(inst);
+      // console.log(`📏 .inst-line RENDUE (largeur: ${Math.round(blocWidth)}px)`);
+    } else {
+      // console.log(`❌ .inst-line NON rendue (largeur: ${Math.round(blocWidth)}px) — Texte pivoté`);
+    }
 
+    const client = document.createElement("div");
+    client.className = "fit-line client-line";
+    client.textContent = inter.clientName || "";
+    interDiv.appendChild(client);
+    linesToResize.push(client);
+  
+    const ville = document.createElement("div");
+    ville.className = "fit-line ville-line";
+    ville.textContent = inter.ville || "";
+    interDiv.appendChild(ville);
+    linesToResize.push(ville);
+    
+    // ⚙️ Resize après affichage
+    requestAnimationFrame(() => {
+      linesToResize.forEach(line => adjustFontSizeToFit(line));
+    });
+  }
 
   setupDragResize(block, intervention) {
     const self = this;
-  
+
+    block.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      self.createTimeLabels(intervention);
+      self.updateTimeLabels(intervention);
+    });
+
+    block.addEventListener("mouseup", (e) => {
+      document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`).forEach(b => {
+        const leftLabel = b.querySelector(".inter-time-label.left");
+        const rightLabel = b.querySelector(".inter-time-label.right");
+      
+        if (leftLabel) leftLabel.remove();
+        if (rightLabel) rightLabel.remove();
+      });      
+    });
+    
+
     interact(block).draggable({
       listeners: {
         start(event) {
+          console.log("🔧 [Drag] Initialisation déplacement");
           block.dataset.initialLeft = parseFloat(block.style.left || "0") || 0;
           block.dataset.totalDx = 0;
         },
         move(event) {
-          const totalDx = parseFloat(block.dataset.totalDx) + event.dx;
+          const totalDx = parseFloat(block.dataset.totalDx || "0") + event.dx;
           block.dataset.totalDx = totalDx;
+
           const initialLeft = parseFloat(block.dataset.initialLeft) || 0;
           const newLeft = Math.round((initialLeft + totalDx) / 15) * 15;
-          const width = parseFloat(block.style.width);
+          const width = parseFloat(block.style.width || "0");
           if (newLeft < 0) return;
-  
+
           const newStart = computeDateTimeFromOffset(newLeft);
           const newEnd = computeDateTimeFromOffset(newLeft + width);
-  
-          if (self.checkForOverlap(newStart, newEnd, intervention)) {
-            block.style.outline = "2px solid red";
-            return;
-          } else {
-            block.style.outline = "none";
+
+          // 🌐 Étape 1 : Analyse ligne par ligne
+          let updatedRows = [];
+          let conflictDetected = false;
+
+          for (const rowId of intervention.technicianRows) {
+            const isFlexible = rowId >= 9; // tout ce qui est >= 9 peut bouger
+
+            const temp = { ...intervention, technicianRows: [rowId] };
+            const result = self.checkForOverlap(newStart, newEnd, temp);
+
+            if (result.status === "conflict") {
+              if (isFlexible && result.row !== null) {
+                updatedRows.push(result.row); // tentative de fallback
+              } else {
+                conflictDetected = true;
+                break;
+              }
+            } else if (result.status === "fallback" && isFlexible) {
+              updatedRows.push(result.row);
+
+              // 💥 DOM live update pour le bloc concerné
+              const thisBlock = [...document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`)].find(b => {
+                const r = b.closest(".technician-row");
+                return r && parseInt(r.dataset.row, 10) === rowId;
+              });
+              const newRowEl = document.querySelector(`.technician-row[data-row="${result.row}"] .timeline-content`);
+              if (thisBlock && newRowEl && thisBlock.parentElement !== newRowEl) {
+                newRowEl.appendChild(thisBlock);
+              }
+            } else {
+              updatedRows.push(rowId); // tout va bien
+            }
           }
-  
+
+          // 🧱 Étape 2 : Conflit = on bloque tout
+          if (conflictDetected) {
+            block.style.outline = '2px solid red';
+            return;
+          }
+
+          block.style.outline = '';
+
+          // ✅ Étape 3 : Appliquer nouvelle position
+          intervention.technicianRows = updatedRows;
+
+          // ➕ Déplacer visuellement tous les blocs frères
           document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`).forEach(b => {
             b.style.left = `${newLeft}px`;
             b.style.width = `${width}px`;
+
+            const oldRowEl = b.closest(".technician-row");
+            const oldRowId = oldRowEl ? parseInt(oldRowEl.dataset.row, 10) : null;
+            const newRowId = updatedRows.includes(oldRowId) ? oldRowId : updatedRows.find(r => !intervention.technicianRows.includes(r));
+
+            if (newRowId !== undefined && newRowId !== null && newRowId !== oldRowId) {
+              const newRowEl = document.querySelector(`.technician-row[data-row="${newRowId}"] .timeline-content`);
+              if (newRowEl && newRowEl !== b.parentElement) {
+                newRowEl.appendChild(b);
+              }
+            }
+            
           });
-  
+
           intervention.dateDebut = newStart;
           intervention.dateFin = newEnd;
-  
+
+          self.updateTimeLabels(intervention);
           self.updateTrajets(intervention);
           self.updateTrajetsDOM(intervention);
-        },
+        },        
         end: async () => {
           if (!intervention.dateDebut || !intervention.dateFin) return;
+          // self.removeTimeLabels(intervention);
           block.style.outline = "none";
+  
           try {
             const saved = await window.dataManager.saveIntervention(intervention);
             if (saved) {
@@ -322,7 +580,7 @@ export class TimelineRenderer {
               window.timeline.updateSingleIntervention(saved);
             }
           } catch (err) {
-            console.error("❌ Erreur durant le drag-resize :", err);
+            console.error("❌ Erreur durant le drag :", err);
           }
         }
       }
@@ -334,65 +592,135 @@ export class TimelineRenderer {
         right: block.querySelector(".resize-handle.right")
       },
       modifiers: [
-        interact.modifiers.restrictSize({
-          min: { width: 30 },
-        }),
-      ],      
+        interact.modifiers.restrictSize({ min: { width: 30 } }),
+      ],
       listeners: {
         start(event) {
-          block._initialResizeLeft = parseFloat(block.style.left) || 0;
-          block._initialResizeWidth = parseFloat(block.style.width) || 0;
-          block._resizeDeltaLeft = 0;
-          block._resizeDeltaWidth = 0;
-        },
+          const block = event.target;
+        
+          block.dataset.initialLeft = block.style.left?.replace('px', '') || "0";
+          block.dataset.initialWidth = block.style.width?.replace('px', '') || "100";
+          block.dataset.totalDx = "0";
+        
+          console.log("🟢 [RESIZE START]");
+          console.log("➡️ initialLeft:", block.dataset.initialLeft);
+          console.log("➡️ initialWidth:", block.dataset.initialWidth);
+        },        
         move(event) {
-          block._resizeDeltaLeft += event.deltaRect.left || 0;
-          block._resizeDeltaWidth += event.deltaRect.width || 0;
-  
-          let displayLeft = block._initialResizeLeft;
-          let displayWidth = block._initialResizeWidth;
-  
-          if (event.edges.left) {
-            displayLeft = Math.round((block._initialResizeLeft + block._resizeDeltaLeft) / 15) * 15;
-            displayWidth = Math.round((block._initialResizeWidth - block._resizeDeltaLeft) / 15) * 15;
-          }
-          if (event.edges.right) {
-            displayWidth = Math.round((block._initialResizeWidth + block._resizeDeltaWidth) / 15) * 15;
-          }
-  
-          if (displayLeft < 0) {
-            displayWidth += displayLeft;
-            displayLeft = 0;
-          }
-  
-          const newStart = computeDateTimeFromOffset(displayLeft);
-          const newEnd = computeDateTimeFromOffset(displayLeft + displayWidth);
-  
-          if (self.checkForOverlap(newStart, newEnd, intervention)) {
-            block.style.outline = "2px solid red";
-            return;
+          const block = event.target;
+          const isLeft = event.edges?.left === true;
+        
+          const delta = isLeft ? event.deltaRect?.left || 0 : event.deltaRect?.width || 0;
+          const totalDx = parseFloat(block.dataset.totalDx || "0") + delta;
+          block.dataset.totalDx = totalDx;
+        
+          const initialLeft = parseFloat(block.dataset.initialLeft || "0");
+          const initialWidth = parseFloat(block.dataset.initialWidth || block.style.width || "0");
+        
+          let newLeft = initialLeft;
+          let newWidth = initialWidth;
+        
+          if (isLeft) {
+            // Bord gauche : déplacement vers la gauche = left ↓, width ↑
+            newLeft = Math.max(0, Math.round((initialLeft + totalDx) / 15) * 15);
+            newWidth = Math.round((initialWidth - totalDx) / 15) * 15;
           } else {
-            block.style.outline = "none";
+            // Bord droit : left fixe, width ↑
+            newWidth = Math.round((initialWidth + totalDx) / 15) * 15;
           }
-  
+        
+          if (newWidth < 15) return;
+        
+          const newStart = computeDateTimeFromOffset(newLeft);
+          const newEnd = computeDateTimeFromOffset(newLeft + newWidth);
+          // Étape 1 : calcul overlap par ligne
+          let updatedRows = [];
+          let conflictDetected = false;
+
+          for (const rowId of intervention.technicianRows) {
+            const isFlexible = rowId >= 9;
+            const temp = { ...intervention, technicianRows: [rowId] };
+            const result = self.checkForOverlap(newStart, newEnd, temp);
+            console.log("[Resize] Overlap result for row", rowId, result);
+
+            if (result.status === "conflict") {
+              if (isFlexible && result.row !== null) {
+                updatedRows.push(result.row);
+              } else {
+                conflictDetected = true;
+                break;
+              }
+            } else if (result.status === "fallback" && isFlexible) {
+              updatedRows.push(result.row);
+
+              const thisBlock = [...document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`)].find(b => {
+                const r = b.closest(".technician-row");
+                return r && parseInt(r.dataset.row, 10) === rowId;
+              });
+
+              const newRowEl = document.querySelector(`.technician-row[data-row="${result.row}"] .timeline-content`);
+              if (thisBlock && newRowEl && thisBlock.parentElement !== newRowEl) {
+                newRowEl.appendChild(thisBlock);
+              }
+
+            } else {
+              updatedRows.push(rowId);
+            }
+          }
+
+          // Étape 2 : gestion conflit
+          if (conflictDetected) {
+            block.style.outline = '2px solid red';
+            return;
+          }
+
+          block.style.outline = '';
+
+          // Étape 3 : mise à jour de l’intervention
+          intervention.technicianRows = updatedRows;
+
+          // Déplacement du bloc si nécessaire
+          const newRowId = updatedRows[0];
+          const newRowEl = document.querySelector(`.technician-row[data-row="${newRowId}"] .timeline-content`);
+          if (newRowEl && block.parentElement !== newRowEl) {
+            newRowEl.appendChild(block);
+          }
+
+          // Même traitement pour les trajets s’ils sont autorisés
+          if (newRowId < 9) {
+            document.querySelectorAll(`.trajet-block[data-id="${intervention._id}"]`).forEach(trajetBlock => {
+              const parent = trajetBlock.closest(".timeline-content");
+              if (newRowEl && parent !== newRowEl) {
+                newRowEl.appendChild(trajetBlock);
+              }
+            });
+          }
+          
+        
+          // Mise à jour visuelle
+          block.style.left = `${newLeft}px`;
+          block.style.width = `${newWidth}px`;
+        
           document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`).forEach(b => {
-            b.style.left = `${displayLeft}px`;
-            b.style.width = `${displayWidth}px`;
-              self.setLabel(b, intervention);
+            if (b !== block) {
+              b.style.left = `${newLeft}px`;
+              b.style.width = `${newWidth}px`;
+            }
           });
-  
+        
+          // MàJ logique
           intervention.dateDebut = newStart;
           intervention.dateFin = newEnd;
-  
+        
+          self.updateTimeLabels(intervention);
           self.updateTrajets(intervention);
           self.updateTrajetsDOM(intervention);
-          const updatedBlock = document.querySelector(`.intervention[data-id="${intervention._id}"]`);
-          if (updatedBlock) self.setLabel(updatedBlock, intervention);
-
-
-        },
+        },                                                 
         end: async () => {
           if (!intervention.dateDebut || !intervention.dateFin) return;
+          // self.removeTimeLabels(intervention);
+          block.style.outline = "none";
+  
           try {
             const saved = await window.dataManager.saveIntervention(intervention);
             if (saved) {
@@ -405,25 +733,30 @@ export class TimelineRenderer {
         }
       }
     });
-  } 
+  }
   setupDragResizeTrajet(trajetBlock, intervention, trajet) {
     const gridStep = 15;
+    const tailleMinPx = 15;
   
     interact(trajetBlock).resizable({
       edges: trajet.direction === 'left' ? { left: true } : { right: true },
       modifiers: [
         interact.modifiers.restrictSize({
-          min: { width: 15 },
-        }),
-      ], 
+          min: { width: tailleMinPx }
+        })
+      ],
       listeners: {
-        start(event) {
+        start: (event) => {
           trajetBlock._initialLeft = parseFloat(trajetBlock.style.left) || 0;
           trajetBlock._initialWidth = parseFloat(trajetBlock.style.width) || 0;
           trajetBlock._deltaLeft = 0;
           trajetBlock._deltaWidth = 0;
+  
+          this.createTrajetDurationLabel(trajetBlock);
+          console.log("🚦 [ResizeTrajet] Début de resize");
         },
-        move(event) {
+  
+        move: (event) => {
           trajetBlock._deltaLeft += event.deltaRect.left || 0;
           trajetBlock._deltaWidth += event.deltaRect.width || 0;
   
@@ -442,21 +775,25 @@ export class TimelineRenderer {
             displayLeft = 0;
           }
   
-          document.querySelectorAll(`.trajet-block.trajet-${trajet.direction}[data-id="${intervention._id}"]`).forEach(b => {
-            b.style.left = `${displayLeft}px`;
-            b.style.width = `${displayWidth}px`;
+          // Applique les nouvelles dimensions
+          document.querySelectorAll(`.trajet-block.trajet-${trajet.direction}[data-id="${intervention._id}"]`).forEach(block => {
+            block.style.left = `${displayLeft}px`;
+            block.style.width = `${displayWidth}px`;
+            this.updateTrajetDurationLabel(block, trajet);
           });
   
-          // 🧠 Calcul de la nouvelle durée uniquement en fonction du width
-          trajet.dureeTrajet = displayWidth * 120000; // 2 minutes par pixel
-          console.log(`📏 Nouvelle largeur trajet ${trajet.direction} : ${displayWidth}px => ${trajet.dureeTrajet}ms`);
+          trajet.dureeTrajet = Math.max(displayWidth * 120000, tailleMinPx * 120000);
+          console.log(`📏 [ResizeTrajet] Width=${displayWidth}px, Durée=${trajet.dureeTrajet}ms`);
         },
+  
         end: async () => {
           try {
             const saved = await window.dataManager.saveIntervention(intervention);
             if (saved) {
               window.dataManager.updateLocalIntervention(saved);
               window.timeline.updateSingleIntervention(saved);
+              this.removeTrajetDurationLabels(intervention, trajet.direction);
+              console.log("✅ [ResizeTrajet] Enregistré et label retiré");
             }
           } catch (err) {
             console.error("❌ Erreur durant le redimensionnement du trajet :", err);
@@ -466,30 +803,127 @@ export class TimelineRenderer {
     });
   }
   
-
-  checkForOverlap(newStart, newEnd, currentIntervention) {
-    return window.dataManager.interventions.some(other => {
-      // Ignorer soi‑même
-      if (other._id === currentIntervention._id) return false;
-
-      // Si l’un des deux n’a pas de technicianRows, pas de chevauchement pertinent
-      if (!Array.isArray(other.technicianRows) || !Array.isArray(currentIntervention.technicianRows)) {
-        return false;
-      }
-
-      // Test d’intersection des lignes
-      const sameRow = other.technicianRows
-        .some(row => currentIntervention.technicianRows.includes(row));
-      if (!sameRow) return false;
-
-      // Cas de chevauchement temporel
-      const startInside = newStart >= other.dateDebut && newStart < other.dateFin;
-      const endInside   = newEnd   >  other.dateDebut && newEnd   <= other.dateFin;
-      const engulfing   = newStart <  other.dateDebut && newEnd   >  other.dateFin;
-
-      return startInside || endInside || engulfing;
+  formatTrajetDuration(ms) {
+  const minutes = Math.round(ms / 60000);
+  const decimal = Math.round((minutes / 60) * 2) / 2; // arrondi à 0.5
+  return {
+    decimal: `${decimal.toFixed(1)}h`
+  };
+  }
+  formatLabelTime(date) {
+    const jour = date.getDay();
+    const heure = date.getHours();
+  
+    if (jour === 0 || jour === 6) return "week-end";
+    if (heure < dayStart || heure > dayEnd) return "nuit";
+  
+    const h = String(date.getHours()).padStart(2, "0");
+    const m = String(date.getMinutes()).padStart(2, "0");
+    return `${h}h${m}`;
+  }
+  
+  createTimeLabels(intervention) {
+    const blocks = document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`);
+    blocks.forEach(block => {
+      const leftLabel = document.createElement("div");
+      leftLabel.className = "inter-time-label left";
+      block.appendChild(leftLabel);
+    
+      const rightLabel = document.createElement("div");
+      rightLabel.className = "inter-time-label right";
+      block.appendChild(rightLabel);
+  
+      // Stocker les références
+      this.timeLabelLeft = leftLabel;
+      this.timeLabelRight = rightLabel;
+    });
+  }  
+  updateTimeLabels(intervention) {
+    const blocks = document.querySelectorAll(`.intervention[data-id="${intervention._id}"]`);
+    blocks.forEach(block => {
+      const leftLabel = block.querySelector(".inter-time-label.left");
+      const rightLabel = block.querySelector(".inter-time-label.right");
+      if (!leftLabel || !rightLabel) return;
+  
+      const start = new Date(intervention.dateDebut);
+      const end = new Date(intervention.dateFin);
+  
+      leftLabel.textContent = this.formatLabelTime(start);
+      rightLabel.textContent = this.formatLabelTime(end);
     });
   }
+  removeTimeLabels() {
+    if (this.timeLabelLeft?.remove) this.timeLabelLeft.remove();
+    if (this.timeLabelRight?.remove) this.timeLabelRight.remove();
+    this.timeLabelLeft = null;
+    this.timeLabelRight = null;
+  }
+  setupInterventionLabelEvents() {
+    const calendar = document.getElementById("calendar");
+    if (!calendar) {
+      console.warn("[setupInterventionLabelEvents] Aucun calendrier trouvé !");
+      return;
+    }
+  
+    calendar.addEventListener("mousedown", (e) => {
+      const interEl = e.target.closest(".intervention");
+      if (!interEl) return;
+  
+      const intervention = window.dataManager.interventions.find(i => i._id === interEl.dataset.id);
+      if (!intervention) return;
+  
+      console.log("[mousedown] Création des time labels pour :", intervention._id);
+  
+      this.createTimeLabels(intervention);
+      this.updateTimeLabels(intervention);
+    });
+  
+    calendar.addEventListener("mouseup", (e) => {
+      if (e.target.closest(".intervention")) {
+        console.log("[mouseup] Suppression des time labels.");
+        this.removeTimeLabels();
+      }
+    });
+  
+    calendar.addEventListener("dragstart", (e) => {
+      if (e.target.closest(".intervention")) {
+        console.log("[dragstart] Suppression des time labels (drag commencé).");
+        this.removeTimeLabels();
+      }
+    });
+  }  
+  createTrajetDurationLabel(trajetBlock) {
+    let label = trajetBlock.querySelector(".trajet-duration-label");
+    if (!label) {
+      label = document.createElement("div");
+      label.className = "trajet-duration-label";
+      trajetBlock.appendChild(label);
+      console.log("🆕 [TrajetLabel] Créé");
+    }
+    return label;
+  }
+  updateTrajetDurationLabel(trajetBlock, trajet) {
+    const label = this.createTrajetDurationLabel(trajetBlock);
+    const duration = this.formatTrajetDuration(trajet.dureeTrajet);
+    label.textContent = duration.decimal;
+    // label.style.left = "50%";
+    // label.style.transform = "translateX(-50%)";
+    console.log("🔁 [TrajetLabel] Mis à jour :", duration.decimal);
+  }
+  removeTrajetDurationLabels(intervention, direction) {
+    const blocks = document.querySelectorAll(`.trajet-block.trajet-${direction}[data-id="${intervention._id}"]`);
+    blocks.forEach(block => {
+      const label = block.querySelector(".trajet-duration-label");
+      if (label) {
+        label.remove();
+        console.log("🗑️ [TrajetLabel] Supprimé");
+      }
+    });
+  }
+  
+  
+  
+  
 
   
   updateTrajets(intervention) {
@@ -536,55 +970,65 @@ export class TimelineRenderer {
           b.style.left  = `${left}px`;
           b.style.width = `${width}px`;
         });
+      
+
     });
   }
   
-  setLabel(interDiv, inter) {
-    // 🔥 Supprime toutes les anciennes lignes
-    interDiv.querySelectorAll(".inst-line, .client-line, .ville-line").forEach(el => el.remove());
   
-    const linesToResize = [];
-  
-    // ✅ Ajouter inst-line SEULEMENT si largeur du bloc >= 45px
-    const blocWidth = interDiv.getBoundingClientRect().width;
-    const tailleMinPx = 45;
-  
-    if (blocWidth > tailleMinPx) {
-      const inst = document.createElement("div");
-      inst.className = "fit-line inst-line";
-      inst.textContent = inter.ticketName || "Intervention";
-      interDiv.appendChild(inst);
-      linesToResize.push(inst);
-      console.log(`📏 .inst-line RENDUE (largeur: ${Math.round(blocWidth)}px)`);
-    } else {
-      console.log(`❌ .inst-line NON rendue (largeur: ${Math.round(blocWidth)}px) — Texte pivoté`);
+  checkForOverlap(dateDebut, dateFin, currentIntervention) {
+    if (!currentIntervention || !Array.isArray(currentIntervention.technicianRows)) {
+      return { status: 'conflict', row: null };
     }
-
-    const client = document.createElement("div");
-    client.className = "fit-line client-line";
-    client.textContent = inter.clientName || "";
-    interDiv.appendChild(client);
-    linesToResize.push(client);
   
-    const ville = document.createElement("div");
-    ville.className = "fit-line ville-line";
-    ville.textContent = inter.ville || "";
-    interDiv.appendChild(ville);
-    linesToResize.push(ville);
-    
-    // ⚙️ Resize après affichage
-    requestAnimationFrame(() => {
-      linesToResize.forEach(line => adjustFontSizeToFit(line));
+    const currentRow = currentIntervention.technicianRows[0];
+    const newLeft = computeOffsetFromDateTime(dateDebut);
+    const newRight = computeOffsetFromDateTime(dateFin);
+  
+    // Cherche une ligne dispo d'abord, même sans conflit
+    let fallbackRow = null;
+    if (currentRow === 9 || currentRow === 10) {
+      fallbackRow = this.findFirstAvailableRow(currentIntervention, dateDebut, dateFin, 9, 10);
+    } else if (currentRow >= 11) {
+      fallbackRow = this.findFirstAvailableRow(currentIntervention, dateDebut, dateFin, 11, 20);
+    }
+  
+    const hasConflict = window.dataManager.interventions.some(other => {
+      if (!other || !Array.isArray(other.technicianRows)) return false;
+      if (other._id && currentIntervention._id && other._id === currentIntervention._id) return false;
+      if (!other.technicianRows.includes(currentRow)) return false;
+  
+      const otherLeft = computeOffsetFromDateTime(new Date(other.dateDebut));
+      const otherRight = computeOffsetFromDateTime(new Date(other.dateFin));
+  
+      return newLeft < otherRight && newRight > otherLeft;
     });
+  
+    if (hasConflict) {
+      if (fallbackRow !== null) return { status: 'fallback', row: fallbackRow };
+      return { status: 'conflict', row: null };
+    }
+  
+    // Pas de conflit, mais une ligne meilleure dispo ?
+    if (fallbackRow !== null && fallbackRow < currentRow) {
+      return { status: 'fallback', row: fallbackRow };
+    }
+  
+    // Tout est ok, reste là
+    return { status: 'ok', row: currentRow };
   }
-
+  
+  
+  
+  
+  
   renderAllInterventions() {
     // 🔥 Supprime tout le planning actuel (interventions + trajets)
     document.querySelectorAll("#calendar .timeline-content .intervention, #calendar .timeline-content .trajet-block")
       .forEach(el => el.remove());
   
     const interventions = window.dataManager.interventions;
-    console.log("🧪 Interventions à afficher :", interventions);
+    // console.log("🧪 Interventions à afficher :", interventions);
     if (!interventions || interventions.length === 0) {
       console.warn("[TimelineRenderer] Aucune intervention à afficher.");
       return;
@@ -592,7 +1036,7 @@ export class TimelineRenderer {
   
     interventions.forEach(inter => {
       // 🧱 Rendu principal de l'intervention
-      console.log("🧪 Rendu intervention :", inter);
+      // console.log("🧪 Rendu intervention :", inter);
       this.renderIntervention(inter);
   
       // 🚌 Ajout des trajets associés à cette intervention
@@ -605,53 +1049,105 @@ export class TimelineRenderer {
   }  
   renderIntervention(intervention) {
     if (!intervention || !Array.isArray(intervention.technicianRows)) return;
-    console.log("🧱 renderIntervention() appelée pour :", intervention._id);
-
   
-    const left = computeOffsetFromDateTime(intervention.dateDebut);
-    const width = computeOffsetFromDateTime(intervention.dateFin) - left;
-  
-    intervention.technicianRows.forEach(rowId => {
-      console.log(`🧩 Tentative de rendu pour row: ${rowId}, intervention: ${intervention._id}`);
-    
-      const row = document.querySelector(`#calendar .technician-row[data-row="${rowId}"] .timeline-content`);
+    const dateDebut = new Date(intervention.dateDebut);
+    const dateFin = new Date(intervention.dateFin);
+    const left = computeOffsetFromDateTime(dateDebut);
+    const width = computeOffsetFromDateTime(dateFin) - left;
 
-      if (!row) {
-        console.warn(`❌ Row introuvable pour rowId: ${rowId}`);
+    const rowIds = Array.isArray(intervention.technicianRows) ? intervention.technicianRows : [];
+
+    if (rowIds.length === 0) {
+      console.warn(`❌ Intervention ${intervention._id} sans technicianRows`);
+      return;
+    }
+
+    let atLeastOnePlaced = false;
+
+    rowIds.forEach(rowId => {
+      const fakeIntervention = { ...intervention, technicianRows: [rowId] };
+      const overlap = this.checkForOverlap(dateDebut, dateFin, fakeIntervention);
+
+      if (overlap.status === "conflict") {
+        console.warn(`❌ Conflit sur la ligne ${rowId} pour ${intervention._id}`);
         return;
       }
-    
-      const interDiv = document.createElement("div");
-      interDiv.className = "intervention";
-      interDiv.dataset.id = intervention._id;
-      interDiv.style.left = `${left}px`;
-      interDiv.style.width = `${width}px`;
-      
-      const leftHandle = document.createElement("div");
-      leftHandle.className = "resize-handle left";
-      const rightHandle = document.createElement("div");
-      rightHandle.className = "resize-handle right";
-      interDiv.appendChild(leftHandle);
-      interDiv.appendChild(rightHandle);
 
-    
-      row.appendChild(interDiv);
-      console.log(`✅ Bloc intervention ajouté à row ${rowId} [intervention ${intervention._id}]`);
-    
-      this.setupDragResize(interDiv, intervention);
-      console.log(`🔧 DragResize initialisé pour ${intervention._id}`);
-    
-      this.setLabel(interDiv, intervention);
-      console.log(`🏷️ setLabel appliqué à intervention ${intervention._id}`);
+      const rowEl = document.querySelector(`.technician-row[data-row="${rowId}"] .timeline-content`);
+      if (!rowEl) {
+        console.warn(`⚠️ DOM introuvable pour rowId ${rowId}`);
+        return;
+      }
+
+      this.placeInterventionBlock(rowEl, intervention, left, width);
+      atLeastOnePlaced = true;
     });
-    
+
+    if (!atLeastOnePlaced) {
+      console.warn(`❌ Aucun bloc placé pour ${intervention._id}`);
+    }
+
   
-    // 👇 Ajoute les trajets associés à cette intervention
     if (Array.isArray(intervention.trajets)) {
       intervention.trajets.forEach(trajet => {
         this.renderTrajetBlock(intervention, trajet);
       });
     }
+  }
+  placeInterventionBlock(row, intervention, left, width) {
+    const interDiv = document.createElement("div");
+    interDiv.className = "intervention";
+    interDiv.dataset.id = intervention._id;
+    interDiv.style.left = `${left}px`;
+    interDiv.style.width = `${width}px`;
+  
+    const leftHandle = document.createElement("div");
+    leftHandle.className = "resize-handle left";
+    const rightHandle = document.createElement("div");
+    rightHandle.className = "resize-handle right";
+    interDiv.appendChild(leftHandle);
+    interDiv.appendChild(rightHandle);
+  
+    row.appendChild(interDiv);
+  
+    this.setupDragResize(interDiv, intervention);
+    this.setLabel(interDiv, intervention);
+  }  
+  findFirstAvailableRow(intervention, dateDebut, dateFin, startRow, endRow) {
+    const newLeft = computeOffsetFromDateTime(dateDebut);
+    const newRight = computeOffsetFromDateTime(dateFin);
+  
+    for (let rowId = startRow; rowId <= endRow; rowId++) {
+      // Clone propre pour éviter les collisions internes
+      const testIntervention = JSON.parse(JSON.stringify(intervention));
+      testIntervention.technicianRows = [rowId];
+  
+      const hasConflict = window.dataManager.interventions.some(other => {
+        if (!other || !Array.isArray(other.technicianRows)) return false;
+      
+        // Protection renforcée contre la self-collision
+        if (other._id && testIntervention._id && other._id === testIntervention._id) return false;
+      
+        if (!other.technicianRows.includes(rowId)) return false;
+      
+        const otherLeft = computeOffsetFromDateTime(new Date(other.dateDebut));
+        const otherRight = computeOffsetFromDateTime(new Date(other.dateFin));
+      
+        return newLeft < otherRight && newRight > otherLeft;
+      });
+      
+  
+      // console.log(`[RowFinder] ${hasConflict ? '❌ Occupée' : '✅ Libre'} → Ligne ${rowId}`);
+  
+      if (!hasConflict) {
+        // console.log(`[RowFinder] ✅ Retourne ${rowId} — DOM =`, document.querySelector(`[data-row="${rowId}"]`));
+
+        return rowId;
+      }
+    }
+  
+    console.warn(`[RowFinder] ❌ Aucune ligne libre trouvée pour intervention ${intervention._id}`);
+    return null;
   }
   renderTrajetBlock(intervention, trajet) {
     if (!trajet || !trajet.direction || !intervention.technicianRows || intervention.technicianRows.length === 0) {
@@ -684,6 +1180,9 @@ export class TimelineRenderer {
     this.renderTypeTrajet(intervention, trajetBlock);
   
     intervention.technicianRows.forEach(rowId => {
+      // ❌ Ignorer les lignes malléables
+      if (rowId >= 9) return;
+    
       const row = document.querySelector(`#calendar .technician-row[data-row="${rowId}"] .timeline-content`);
       if (row) {
         const clone = trajetBlock.cloneNode(true);
@@ -753,14 +1252,14 @@ export class TimelineRenderer {
     // Polling lui-même
     setInterval(async () => {
       if (document.visibilityState !== "visible") {
-        console.log("[POLL] Onglet inactif — polling suspendu temporairement");
+        // console.log("[POLL] Onglet inactif — polling suspendu temporairement");
         return;
       }
     
       const scrollContainer = document.querySelector(".timeline-scroll");
       const currentScrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
     
-      console.log(`[POLL] Envoi de requête à ${new Date().toLocaleTimeString()}`);
+      // console.log(`[POLL] Envoi de requête à ${new Date().toLocaleTimeString()}`);
       const updated = await window.dataManager.pollNewInterventions(lastUpdate);
     
       if (updated.length > 0) {
@@ -770,9 +1269,9 @@ export class TimelineRenderer {
         lastUpdate = new Date();
         secondsSince = 0;
     
-        console.log(`[POLL] 🔁 Planning mis à jour à ${lastUpdate.toISOString()}`);
+        // console.log(`[POLL] 🔁 Planning mis à jour à ${lastUpdate.toISOString()}`);
       } else {
-        console.log("[POLL] 💤 Aucun changement détecté.");
+        // console.log("[POLL] 💤 Aucun changement détecté.");
       }
     }, 5000);
   }
@@ -783,438 +1282,3 @@ export class TimelineRenderer {
 
 
 
-
-/**************************************************************************
-  MENU CONTEXTUEL + FORMULAIRE MODAL
-**************************************************************************/
-let lastContextOffsetX = 0;   // on stockera la coordonnée X en pixel
-let lastTimelineContent = null; // on stockera l'élément .timeline-content
-const TECHS = [
-  { id:1, name:"Romain"   },
-  { id:2, name:"Lucas"    },
-  { id:3, name:"Rodrigue" },
-  { id:4, name:"LAUREA"   },
-  { id:5, name:"Presta"   }
-];
-document.addEventListener("contextmenu", (e) => {
-  e.preventDefault();
-
-  const menu = document.getElementById("context-menu");
-  if (!menu) return; // si pas trouvé
-
-  // On masque le menu s'il était visible
-  menu.style.display = "none";
-
-  // Détecte si on a cliqué sur un bloc .intervention
-  const interEl = e.target.closest(".intervention");
-  lastTimelineContent = e.target.closest(".timeline-content");
-
-  if (lastTimelineContent) {
-    // On calcule l'offset X local
-    const rect = lastTimelineContent.getBoundingClientRect();
-    lastContextOffsetX = e.clientX - rect.left + lastTimelineContent.scrollLeft;
-  } else {
-    lastContextOffsetX = 0;
-  }
-
-  const menuAdd = document.getElementById("menu-add");
-  const menuShow = document.getElementById("menu-show");
-  const menuDelete = document.getElementById("menu-delete");
-  const menuDivider      = document.getElementById("menu-divider");
-  const menuToggleAller  = document.getElementById("menu-toggle-aller");
-  const menuToggleRetour = document.getElementById("menu-toggle-retour");
-
-  // Utilitaire pour savoir si l'intervention a déjà ce trajet
-  function hasTrajet(interv, dir) {
-    return Array.isArray(interv.trajets) && interv.trajets.some(t => t.direction === dir);
-  }
-
-  if (interEl) {
-    // Clique droit sur une intervention
-    menuAdd.style.display  = "none";menuAdd.style.textAlign = "center";
-    menuShow.style.display = "block";menuShow.style.textAlign = "center";
-    menuDelete.style.display = "block";menuDelete.style.textAlign = "center";
-    const interv = window.dataManager.interventions
-                      .find(i => i._id === interEl.dataset.id);
-
-    // Ajustement du texte selon l'existence du trajet
-    menuToggleAller.textContent  = hasTrajet(interv, "left")
-      ? "Retirer Trajet Aller"
-      : "⬅ Ajout Trajet Aller";
-    menuToggleRetour.textContent = hasTrajet(interv, "right")
-      ? "Retirer Trajet Retour"
-      : "Ajout Trajet Retour ➡";
-
-    // Affichage du séparateur et des toggles
-    menuDivider.style.display      = "block";menuDivider.style.textAlign = "center"; 
-    menuToggleAller.style.display  = "block";menuToggleAller.style.textAlign = "center";
-    menuToggleRetour.style.display = "block";menuToggleRetour.style.textAlign = "center";
-    menu.dataset.interventionId = interEl.dataset.id;
-  } else {
-    // Clique droit sur zone vide
-    menuAdd.style.display  = "block";
-    menuShow.style.display = "none";
-    menuDelete.style.display = "none";
-    menuDivider.style.display      = "none";
-    menuToggleAller.style.display  = "none";
-    menuToggleRetour.style.display = "none";
-    menu.dataset.interventionId = "";
-  }
-
-  // Position du menu
-  menu.style.left = e.pageX + "px";
-  menu.style.top  = e.pageY + "px";
-  menu.style.display = "block";
-});
-
-// Quand on clique ailleurs, on masque le menu
-document.addEventListener("click", () => {
-  const menu = document.getElementById("context-menu");
-  if (menu) menu.style.display = "none";
-});
-
-// Écouteurs sur le menu
-const menuAdd  = document.getElementById("menu-add");
-const menuShow = document.getElementById("menu-show");
-const menuDelete = document.getElementById("menu-delete");
-const menuToggleAller = document.getElementById("menu-toggle-aller");
-const menuToggleRetour = document.getElementById("menu-toggle-retour");
-if (menuAdd) {
-  menuAdd.addEventListener("click", () => {
-    const menu = document.getElementById("context-menu");
-    menu.style.display = "none";
-
-    // On ouvre le formulaire en mode "nouvelle intervention"
-    showInterventionForm(null);
-  });
-}
-if (menuShow) {
-  menuShow.addEventListener("click", () => {
-    const menu = document.getElementById("context-menu");
-    menu.style.display = "none";
-
-    const intervId = menu.dataset.interventionId;
-    if (!intervId) return;
-
-    // Récupère l'intervention depuis dataManager
-    const found = window.dataManager.interventions.find(i => i._id === intervId);
-    if (!found) return;
-
-    // Ouvre le formulaire en mode "affichage / modification"
-    showInterventionForm(found);
-  });
-}
-if (menuDelete) {
-    menuDelete.addEventListener("click", () => {
-      const menu = document.getElementById("context-menu");
-      menu.style.display = "none";
-  
-      const intervId = menu.dataset.interventionId;
-        if (!intervId) return;
-
-        const found = window.dataManager.interventions.find(i => i._id === intervId);
-        if (!found) {
-        console.warn("Intervention non trouvée dans la liste.");
-        return;
-        }
-
-        window.dataManager.deleteIntervention(found)
-        .then(() => {
-            window.timeline.renderAllInterventions();
-        })
-        .catch(err => {
-            console.error("Erreur lors de la suppression :", err);
-        });
-    });
-}
-if (menuToggleAller) {
-  menuToggleAller.addEventListener("click", async () => {
-    const menu = document.getElementById("context-menu");
-    menu.style.display = "none";
-
-    const id = menu.dataset.interventionId;
-    const found = window.dataManager.interventions.find(i => i._id === id);
-    if (!found) return;
-
-    // On crée un nouvel objet en reprenant tout
-    const interv = {
-      ...found,
-      trajets: Array.isArray(found.trajets) ? [...found.trajets] : []
-    };
-
-    const hasLeft = interv.trajets.some(t => t.direction === "left");
-    const durMs = 3600_000;
-
-    if (hasLeft) {
-      interv.trajets = interv.trajets.filter(t => t.direction !== "left");
-    } else {
-      interv.trajets.push({
-        direction:   "left",
-        dateDebut:   new Date(new Date(interv.dateDebut).getTime() - durMs),
-        dateFin:     new Date(interv.dateDebut),
-        type:        "voiture",
-        dureeTrajet: durMs
-      });
-    }
-
-    try {
-      const saved = await window.dataManager.saveIntervention(interv);
-      if (saved) {
-        window.dataManager.updateLocalIntervention(saved);
-        window.timeline.updateSingleIntervention(saved);
-      }
-    } catch (err) {
-      console.error("❌ Erreur lors du toggle trajet :", err);
-    }
-    
-  });
-}
-if (menuToggleRetour) {
-  menuToggleRetour.addEventListener("click", async () => {
-    const menu = document.getElementById("context-menu");
-    menu.style.display = "none";
-
-    const id = menu.dataset.interventionId;
-    const found = window.dataManager.interventions.find(i => i._id === id);
-    if (!found) return;
-
-    const interv = {
-      ...found,
-      trajets: Array.isArray(found.trajets) ? [...found.trajets] : []
-    };
-
-    const hasRight = interv.trajets.some(t => t.direction === "right");
-    const durMs = 3600_000;
-
-    if (hasRight) {
-      interv.trajets = interv.trajets.filter(t => t.direction !== "right");
-    } else {
-      interv.trajets.push({
-        direction:   "right",
-        dateDebut:   new Date(interv.dateFin),
-        dateFin:     new Date(new Date(interv.dateFin).getTime() + durMs),
-        type:        "voiture",
-        dureeTrajet: durMs
-      });
-    }
-
-    try {
-      const saved = await window.dataManager.saveIntervention(interv);
-      if (saved) {
-        window.dataManager.updateLocalIntervention(saved);
-        window.timeline.updateSingleIntervention(saved);
-      }
-    } catch (err) {
-      console.error("❌ Erreur lors du toggle trajet :", err);
-    }
-    
-  });
-}
-
-
-  
-
-/**************************************************************************
-  showInterventionForm(intervention)
-  - Si intervention == null => on crée une intervention
-  - Sinon => on modifie / affiche
-**************************************************************************/
-function showInterventionForm(intervention) {
-  const modal = document.getElementById("form-modal");
-  if (!modal) {
-    console.error("showInterventionForm : modal introuvable");
-    return;
-  }
-
-  // Champs de texte
-  const titleEl  = document.getElementById("form-title");
-  const ticketEl = document.getElementById("form-ticketName");
-  const clientEl = document.getElementById("form-clientName");
-  const villeEl  = document.getElementById("form-ville");
-  const leftChk  = document.getElementById("form-leftTrajet");
-  const rightChk = document.getElementById("form-rightTrajet");
-  
-  // Conteneur des checkbox tech
-  const techContainer = document.getElementById("tech-container");
-  if (!techContainer) {
-    console.error("showInterventionForm : #tech-container manquant dans le DOM");
-    return;
-  }
-
-  // Réinitialisation des champs
-  ticketEl.value   = "";
-  clientEl.value   = "";
-  villeEl.value    = "";
-  leftChk.checked  = false;
-  rightChk.checked = false;
-  techContainer.innerHTML = "";  // Vider les anciennes checkbox
-
-  if (!intervention) {
-    titleEl.textContent = "Nouvelle intervention";
-    modal.dataset.interventionId = "";
-    console.log("Création d'une NOUVELLE intervention");
-  } else {
-    titleEl.textContent = "Modifier intervention";
-    modal.dataset.interventionId = intervention._id || "";
-    console.log("Édition de l'intervention", intervention._id);
-
-    // Remplissage des textes
-    ticketEl.value = intervention.ticketName  || "";
-    clientEl.value = intervention.clientName  || "";
-    villeEl.value  = intervention.ville       || "";
-
-    // Trajets
-    leftChk.checked  = Array.isArray(intervention.trajets) && intervention.trajets.some(t => t.direction === "left");
-    rightChk.checked = Array.isArray(intervention.trajets) && intervention.trajets.some(t => t.direction === "right");
-  }
-
-  // --- Construction des checkbox techniciens ---
-  // On part toujours de intervention.technicianRows (tableau de 1 à 5)
-  const selectedRows = Array.isArray(intervention?.technicianRows)
-    ? intervention.technicianRows
-    : [];
-
-  console.log("TechnicianRows à pré-cocher :", selectedRows);
-
-  TECHS.forEach(({id,name}) => {
-    // Création de la case à cocher
-    const chk = document.createElement("input");
-    chk.type  = "checkbox";
-    chk.name  = "tech";
-    chk.value = id;               // on lit ensuite parseInt(chk.value)
-    chk.id    = `tech-${id}`;
-    if (selectedRows.includes(id)) {
-      chk.checked = true;
-      console.log(`→ pré-coché: ${name} (id=${id})`);
-    }
-
-    // Label associé
-    const lbl = document.createElement("label");
-    lbl.htmlFor = chk.id;
-    lbl.textContent = name;
-
-    // On ajoute au conteneur
-    techContainer.appendChild(chk);
-    techContainer.appendChild(lbl);
-  });
-
-  // Affiche la modale
-  modal.style.display = "flex";
-}
-
-
-
-
-/**************************************************************************
-  Boutons "Enregistrer" / "Annuler" dans la modale
-**************************************************************************/
-
-function addHoursToDate(baseDate, hours) {
-    const copy = new Date(baseDate);
-    copy.setHours(copy.getHours() + hours);
-    return copy;
-  }
-  
-
-const saveBtn   = document.getElementById("form-save-btn");
-const cancelBtn = document.getElementById("form-cancel-btn");
-
-if (saveBtn) {
-  saveBtn.addEventListener("click", async () => {
-    const modal = document.getElementById("form-modal");
-    if (!modal) return;
-  
-    const intervId  = modal.dataset.interventionId;
-    const ticketEl  = document.getElementById("form-ticketName");
-    const clientEl  = document.getElementById("form-clientName");
-    const villeEl   = document.getElementById("form-ville");
-    const leftChk   = document.getElementById("form-leftTrajet");
-    const rightChk  = document.getElementById("form-rightTrajet");
-  
-    let dateDebut, dateFin;
-    if (intervId) {
-      const existing = window.dataManager.interventions.find(i => i._id === intervId);
-      if (!existing) return alert("Intervention introuvable");
-      dateDebut = existing.dateDebut;
-      dateFin = existing.dateFin;
-    } else {
-      dateDebut = computeDateTimeFromOffset(lastContextOffsetX);
-      dateFin   = computeDateTimeFromOffset(lastContextOffsetX + pixelsPerHourDay);
-    }
-  
-    // 🔧 Construction des techniciens
-    const techChecks = document.querySelectorAll("#tech-container input[name='tech']:checked");
-    const technicianRows = [];
-    const technicianNames = [];
-  
-    techChecks.forEach(chk => {
-      const row = parseInt(chk.value, 10);
-      const tech = TECHS.find(t => t.id === row);
-      if (tech) {
-        technicianRows.push(row);
-        technicianNames.push(tech.name);
-      }
-    });
-  
-    if (technicianRows.length === 0) {
-      alert("Veuillez sélectionner au moins un technicien.");
-      return;
-    }
-  
-    // 🔧 Construction des trajets
-    const trajets = [];
-    if (leftChk?.checked) {
-      const start = addHoursToDate(dateDebut, -1);
-      const end = new Date(dateDebut);
-      trajets.push({
-        direction: "left",
-        dateDebut: start,
-        dateFin: end,
-        type: "voiture",
-        dureeTrajet: end.getTime() - start.getTime()
-      });
-    }
-    if (rightChk?.checked) {
-      const start = new Date(dateFin);
-      const end = addHoursToDate(dateFin, 1);
-      trajets.push({
-        direction: "right",
-        dateDebut: start,
-        dateFin: end,
-        type: "voiture",
-        dureeTrajet: end.getTime() - start.getTime()
-      });
-    }
-  
-    const newInter = {
-      _id: intervId || undefined,
-      dateDebut,
-      dateFin,
-      ticketName: ticketEl.value.trim(),
-      clientName: clientEl.value.trim(),
-      ville: villeEl.value.trim(),
-      technicianRows,
-      technicianNames,
-      trajets
-    };
-  
-    try {
-      const saved = await window.dataManager.saveIntervention(newInter);
-      if (saved) {
-        window.dataManager.updateLocalIntervention(saved);
-        window.timeline.updateSingleIntervention(saved);
-        modal.style.display = "none";
-      }
-    } catch (err) {
-      console.error("💥 Erreur lors de la sauvegarde :", err);
-      alert("Erreur lors de l'enregistrement : " + err.message);
-    }
-  });
-  
-}
-if (cancelBtn) {
-  cancelBtn.addEventListener("click", () => {
-    const modal = document.getElementById("form-modal");
-    if (modal) modal.style.display = "none";
-  });
-}

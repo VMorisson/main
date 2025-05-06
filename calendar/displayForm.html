@@ -1,0 +1,79 @@
+<style>
+  .form-alert {
+    color: red;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+</style>
+
+<div id="form-modal" class="modal" style="display: none">
+  <div class="modal-content">
+    <h2 id="form-title">Nouvelle intervention</h2>
+
+    <form id="intervention-form">
+      <div class="modal-field">
+        <label for="form-ticketName">Ticket :</label>
+        <input type="text" id="form-ticketName" required />
+      </div>
+
+      <div class="modal-field">
+        <label for="form-clientName">Client :</label>
+        <input type="text" id="form-clientName" required />
+      </div>
+
+      <div class="modal-field">
+        <label for="form-ville">Ville :</label>
+        <input id="form-ville" name="ville" type="text" autocomplete="off" spellcheck="false">
+        <datalist id="ville-suggestions"></datalist>
+      </div>
+      <!-- Suggestions ville -->
+      <div id="ville-dropdown" class="autocomplete-dropdown"></div>
+
+      <div class="modal-field">
+        <label for="form-codePostal">Code postal :</label>
+        <input id="form-codePostal" name="codePostal" type="text" autocomplete="off" spellcheck="false">
+        <datalist id="postal-suggestions"></datalist>
+      </div>
+      <!-- Suggestions CP -->
+      <div id="postal-dropdown" class="autocomplete-dropdown"></div>
+      
+
+      <div class="modal-field">
+        <label>Trajets :</label>
+        <div class="trajet-checkboxes">
+          <label><input type="checkbox" id="form-leftTrajet" /> Aller</label>
+          <label><input type="checkbox" id="form-rightTrajet" /> Retour</label>
+        </div>
+      </div>
+
+      <div class="modal-field">
+        <label>Techniciens :</label>
+        <div id="tech-container" class="technician-checkboxes">
+          <div>
+            <label><input type="checkbox" class="tech-checkbox" value="Romain" /> Romain</label>
+          </div>
+          <div>
+            <label><input type="checkbox" class="tech-checkbox" value="Lucas" /> Lucas</label>
+          </div>
+          <div>
+            <label><input type="checkbox" class="tech-checkbox" value="Rodrigue" /> Rodrigue</label>
+          </div>
+          <div>
+            <label><input type="checkbox" class="tech-checkbox" value="LAUREA" /> LAUREA</label>
+            <input type="text" class="tech-detail" id="laurea-detail" placeholder="Nom chez LAUREA" />
+          </div>
+          <div>
+            <label><input type="checkbox" class="tech-checkbox" value="PRESTA" /> PRESTA</label>
+            <input type="text" class="tech-detail" id="presta-detail" placeholder="Nom du prestataire" />
+          </div>
+        </div>
+        
+      </div>
+
+      <div class="modal-buttons">
+        <button type="submit" id="form-save">Sauvegarder</button>
+        <button type="button" id="form-cancel">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
