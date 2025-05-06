@@ -360,7 +360,9 @@ export class TimelineRenderer {
     );
     addStartOfDayLines();
     generateTechnicianLines(totalWidth);
-    freezeCalendarOverlays();
+    // setTimeout(() => { //pour l'instant pas besoin de setTimeout, ractiver si besoin
+      freezeCalendarOverlays();
+    // }, 100); // attendre un poil après le render complet
     const expandRightZone = document.getElementById("expand-right-zone");
     if (expandRightZone) {
       expandRightZone.style.left = totalWidth + "px";

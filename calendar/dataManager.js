@@ -96,6 +96,7 @@ export class DataManager {
            ticketName:      intervention.ticketName || "",
            clientName:      intervention.clientName || "",
            ville:           intervention.ville || "",
+           codePostal:     intervention.codePostal || "",
            trajets:         trajets,
            //dateModif: intervention.dateModif ? new Date(intervention.dateModif) : new Date(0)
          };
@@ -117,6 +118,7 @@ export class DataManager {
             ticketName:     intervention.ticketName,
             clientName:     intervention.clientName,
             ville:          intervention.ville,
+            codePostal:     intervention.codePostal,
           };
           if (Array.isArray(intervention.technicianNames)) {
             body.technicianNames = [...intervention.technicianNames];

@@ -111,6 +111,7 @@ export function showInterventionForm(intervention) {
 
   villeEl.addEventListener("input", async () => {
     const val = villeEl.value.trim();
+    capitalizeFirstLetterOnInput(villeEl);
     villeDropdown.style.display = "none";
     villeDropdown.innerHTML = "";
 
@@ -163,7 +164,7 @@ export function showInterventionForm(intervention) {
 postalEl.addEventListener("input", async () => {
   const val = postalEl.value.trim();
   console.log("📥 [Input Code Postal] valeur entrée :", val);
-
+  
   postalDropdown.style.display = "none";
   postalDropdown.innerHTML = "";
 
@@ -176,7 +177,7 @@ postalEl.addEventListener("input", async () => {
     console.log("🚫 [Input Code Postal] Abort précédente requête.");
     postalAbortController.abort();
   }
-
+  
   postalAbortController = new AbortController();
 
   try {
@@ -251,8 +252,10 @@ postalEl.addEventListener("input", async () => {
     const alertEl = document.querySelector(".form-alert");
     if (alertEl) alertEl.remove();
     modal.style.display = "none";
+    modal.villeDropdown.remove();
+    modal.postalDropdown.remove();
   };
-
+  
   modal.style.display = "flex";
 }
 
@@ -384,7 +387,19 @@ async function prepareInterventionFromForm() {
 
 
 
-
+function capitalizeFirstLetterOnInput(inputEl) {
+  inputEl.addEventListener("input", () => {
+    const val = inputEl.value;
+    if (val.length > 0) {
+      const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
+      if (capitalized !== val) {
+        const pos = inputEl.selectionStart;
+        inputEl.value = capitalized;
+        inputEl.setSelectionRange(pos, pos); // conserve le curseur
+      }
+    }
+  });
+}
 function addHoursToDate(baseDate, hours) {
   const copy = new Date(baseDate);
   copy.setHours(copy.getHours() + hours);
@@ -415,11 +430,13 @@ document.addEventListener("mouseup", (e) => {
     console.log("[Global Click] Clic complet en dehors du formulaire -> Fermeture.");
     const alertEl = document.querySelector(".form-alert");
     if (alertEl) alertEl.remove();
+      villeDropdown.remove();
+      postalDropdown.remove();
     modal.style.display = "none";
   } else {
     console.log("[Global Click] Clic commencé ou terminé à l'intérieur -> Rien.");
   }
-
+  
   // Reset le flag
   clickStartedInsideModal = false;
 });

@@ -213,7 +213,7 @@ app.get('/api/villes', async (req, res) => {
   const q = req.query.q || "";
   if (q.length < 2) return res.json([]);
 
-  const regexVille = new RegExp("^" + q, "i");
+  const regexVille = new RegExp("^" + q, "i"); // ← ce `i` rend la recherche insensible à la casse
   try {
     const results = await Ville.find({ ville: regexVille }).limit(20).lean();
 
@@ -230,6 +230,7 @@ app.get('/api/villes', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.get("/api/villes/by-code-postal", async (req, res) => {
   const { q } = req.query;

@@ -54,6 +54,7 @@ const interventionSchema = new mongoose.Schema({
   ticketName:    { type: String },
   clientName:    { type: String },
   ville:         { type: String },
+  codePostal:    { type: String },
 
   technicianRows: {
     type: [Number],
