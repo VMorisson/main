@@ -263,72 +263,31 @@ function adjustFontSizeToFit(element, maxFontSize = 14, minFontSize = 10) {
   }
 }
 function freezeCalendarOverlays() {
-  console.log("🧊 Lancement de freezeCalendarOverlays");
+  const rows = document.querySelectorAll(".technician-row");
+  const referenceOffset = rows[0]?.querySelector(".timeline-content")?.offsetLeft ?? 0;
 
-  if (typeof html2canvas === "undefined") {
-    console.warn("⚠️ html2canvas pas encore chargé. Retente dans 100ms...");
-    setTimeout(freezeCalendarOverlays, 100);
+  let isAligned = true;
+
+  rows.forEach(row => {
+    const content = row.querySelector(".timeline-content");
+    if (!content) return;
+
+    const offset = content.offsetLeft;
+    if (offset !== referenceOffset) {
+      console.warn(`⚠️ Décalage détecté sur la ligne ${row.dataset.row} : offsetLeft = ${offset}, attendu = ${referenceOffset}`);
+      isAligned = false;
+    }
+  });
+
+  if (!isAligned) {
+    console.error("❌ Annulation de freezeCalendarOverlays() — layout instable.");
     return;
   }
 
-  // Utilise directement les bons éléments .timeline-content avec les classes de zone
-  const getImageForZone = (zoneClass) => {
-    const timeline = document.querySelector(`.timeline-content.${zoneClass}`);
-    if (!timeline) {
-      console.warn(`❌ Pas de .timeline-content trouvé pour .${zoneClass}`);
-      return Promise.resolve(null);
-    }
-
-    console.log(`📸 Capture demandée pour .timeline-content.${zoneClass}`);
-
-    return html2canvas(timeline, {
-      backgroundColor: null,
-      useCORS: true,
-      scale: 1
-    }).then(canvas => {
-      const img = canvas.toDataURL("image/png");
-      console.log(`✅ Capture OK .${zoneClass}, taille: ${img.length}`);
-      return img;
-    }).catch(err => {
-      console.error(`🔥 Erreur capture .${zoneClass}`, err);
-      return null;
-    });
-  };
-
-  Promise.all([
-    getImageForZone("zone-tech"),
-    getImageForZone("zone-laurea"),
-    getImageForZone("zone-presta")
-  ]).then(([techImg, laureaImg, prestaImg]) => {
-    console.log("🎨 Application des fonds capturés…");
-
-    document.querySelectorAll(".timeline-content").forEach(timeline => {
-      const classList = timeline.classList;
-      console.log("🔍 Inspecte :", [...classList]);
-
-      timeline.querySelectorAll(".hour-line, .weekend-overlay, .night-overlay, .start-of-day").forEach(el => el.remove());
-
-      if (classList.contains("zone-tech") && techImg) {
-        console.log("🖼️ Applique fond TECH");
-        timeline.style.backgroundImage = `url(${techImg})`;
-      } else if (classList.contains("zone-laurea") && laureaImg) {
-        console.log("🖼️ Applique fond LAUREA");
-        timeline.style.backgroundImage = `url(${laureaImg})`;
-      } else if (classList.contains("zone-presta") && prestaImg) {
-        console.log("🖼️ Applique fond PRESTA");
-        timeline.style.backgroundImage = `url(${prestaImg})`;
-      } else {
-        console.warn("🚫 Aucun fond applicable à cette ligne");
-      }
-
-      timeline.style.backgroundSize = "cover";
-      timeline.style.backgroundRepeat = "no-repeat";
-      timeline.style.backgroundPosition = "top left";
-    });
-
-
-  });
+  console.log("✅ Toutes les lignes sont alignées. Application des fonds...");
+  // ↘️ Continue ici avec ton code normal pour appliquer les classes : zone-laurea, zone-presta, etc.
 }
+
 
 
 
